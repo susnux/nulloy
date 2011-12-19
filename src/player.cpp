@@ -20,6 +20,7 @@
 #include "action.h"
 #include "systemTray.h"
 #include "m3uPlaylist.h"
+#include "tagReader.h"
 
 #ifndef _N_NO_SKINS_
 #include "skinLoader.h"
@@ -324,7 +325,7 @@ NPlayer::NPlayer()
 
 	loadSettings();
 
-	m_mainWindow->setTitle("");
+	m_mainWindow->setTitle(QCoreApplication::applicationName() + " " + QCoreApplication::applicationVersion());
 
 	QStringList pathList;
 	if (QCoreApplication::arguments().size() > 1) {
@@ -553,10 +554,17 @@ void NPlayer::on_playbackEngine_mediaChanged(const QString &path)
 		return;
 
 	QString title;
-	if (QFile(path).exists())
-		title = QFileInfo(path).fileName();
-	else
-		title = "";
+	QString app_title_version = QCoreApplication::applicationName() + " " + QCoreApplication::applicationVersion();
+	if (QFile(path).exists()) {
+		NTagReader tagReader(path);
+		QString format = NSettings::instance()->value("GUI/WindowTitleFormat").toString();
+		if (!format.isEmpty() && tagReader.isValid())
+			title = tagReader.toString(format);
+		else
+			title = app_title_version;
+	} else {
+		title = app_title_version;
+	}
 	m_mainWindow->setTitle(title);
 	NSystemTray::setToolTip(title);
 }
@@ -645,8 +653,18 @@ void NPlayer::showAboutMessageBox()
 	QDialog *dialog = new QDialog(m_mainWindow);
 	dialog->setWindowTitle(QObject::tr("About ") + QCoreApplication::applicationName());
 	dialog->setMaximumSize(0, 0);
+
 	QVBoxLayout *layout = new QVBoxLayout;
 	dialog->setLayout(layout);
+
+	QTabWidget *tabWidget = new QTabWidget(m_mainWindow);
+	layout->addWidget(tabWidget);
+
+	// about tab
+	QWidget *tab1 = new QWidget(m_mainWindow);
+    tabWidget->addTab(tab1, tr("About"));
+	QVBoxLayout *tab1Layout = new QVBoxLayout;
+	tab1->setLayout(tab1Layout);
 
 	QLabel *iconLabel = new QLabel;
 	QPixmap pixmap(":icon-96.png");
@@ -659,25 +677,47 @@ void NPlayer::showAboutMessageBox()
 	iconLayout->addStretch();
 	iconLayout->addWidget(iconLabel);
 	iconLayout->addStretch();
-	layout->addLayout(iconLayout);
+	tab1Layout->addLayout(iconLayout);
 
-	QTextBrowser *textBrowser = new QTextBrowser(this);
-	textBrowser->setStyleSheet("background: transparent");
-	textBrowser->setFrameShape(QFrame::NoFrame);
-	textBrowser->setHtml("<center>" + html + "</center>");
+	QTextBrowser *tab1TextBrowser = new QTextBrowser(this);
+	tab1TextBrowser->setStyleSheet("background: transparent");
+	tab1TextBrowser->setFrameShape(QFrame::NoFrame);
+	tab1TextBrowser->setHtml("<center>" + html + "</center>");
+	tab1TextBrowser->setMinimumWidth(350);
+	tab1Layout->addWidget(tab1TextBrowser);
+	//
 
-	textBrowser->setMinimumWidth(350);
-	layout->addWidget(textBrowser);
+	// changelog tab
+	QWidget *tab2 = new QWidget(m_mainWindow);
+    tabWidget->addTab(tab2, tr("Changelog"));
+	QVBoxLayout *tab2Layout = new QVBoxLayout;
+	tab2Layout->setContentsMargins(0, 0, 0, 0);
+	tab2->setLayout(tab2Layout);
+
+	QFile file( ":/ChangeLog");
+	file.open(QIODevice::ReadOnly | QIODevice::Text);
+	QTextStream stream(&file);
+	QString line;
+	QString str = stream.readAll();
+	file.close();
+
+	str.replace("\n", "<br>\n");
+	str.replace(QRegExp("(\\*[^<]*)(<br>)"), "<b>\\1</b>\\2");
+
+	QTextBrowser *tab2TextBrowser = new QTextBrowser(this);
+	tab2TextBrowser->setHtml(str);
+	tab2Layout->addWidget(tab2TextBrowser);
+	//
 
 	QPushButton *closeButton = new QPushButton("Close");
-	connect(closeButton, SIGNAL(clicked()), dialog, SLOT(accept())); \
+	connect(closeButton, SIGNAL(clicked()), dialog, SLOT(accept()));
 	QHBoxLayout* buttonLayout = new QHBoxLayout();
 	buttonLayout->addStretch();
 	buttonLayout->addWidget(closeButton);
 	buttonLayout->addStretch();
 	layout->addLayout(buttonLayout);
 
-	dialog->exec();
+	dialog->show();
 }
 
 void NPlayer::showOpenFileDialog()
