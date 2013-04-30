@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -20,7 +20,7 @@ NShortcutEditorWidget::NShortcutEditorWidget(QWidget *parent) : QTableWidget(par
 {
 	setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 	setColumnCount(4);
-	setHorizontalHeaderLabels(QStringList() << "Name" << "Description" << "Shortcut" << "Global Shortcut");
+	setHorizontalHeaderLabels(QStringList() << "Action" << "Description" << "Shortcut" << "Global Shortcut");
 
 	verticalHeader()->setVisible(FALSE);
 
@@ -75,6 +75,11 @@ void NShortcutEditorWidget::init(const QList<NAction *> &actionList)
 	horizontalHeader()->setResizeMode(Shortcut, QHeaderView::Stretch);
 	horizontalHeader()->setResizeMode(GlobalShortcut, QHeaderView::Stretch);
 	horizontalHeader()->setStretchLastSection(TRUE);
+
+	int height = horizontalHeader()->height();
+	for (int i = 0; i < rowCount(); ++i)
+		height += rowHeight(i);
+	setMaximumHeight(height);
 
 	m_init = TRUE;
 }

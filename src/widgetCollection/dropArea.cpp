@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -23,7 +23,10 @@ NDropArea::NDropArea(QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {}
 
 void NDropArea::dragEnterEvent(QDragEnterEvent *event)
 {
-	event->acceptProposedAction();
+	if (event->mimeData() && event->mimeData()->hasUrls() && !event->mimeData()->urls().isEmpty())
+		event->acceptProposedAction();
+	else
+		event->ignore();
 }
 
 void NDropArea::dragMoveEvent(QDragMoveEvent *event)
@@ -47,6 +50,13 @@ void NDropArea::dropEvent(QDropEvent *event)
 	}
 
 	event->acceptProposedAction();
+}
+
+QStringList NDropArea::mimeTypes() const
+{
+	QStringList qstrList;
+	qstrList.append("text/uri-list");
+	return qstrList;
 }
 
 /* vim: set ts=4 sw=4: */

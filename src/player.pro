@@ -13,7 +13,6 @@ SOURCES += *.cpp ux/*.cpp
 
 FORMS += *.ui
 
-TMP_DIR = .tmp
 OBJECTS_DIR	= $$TMP_DIR
 MOC_DIR		= $$TMP_DIR
 RCC_DIR		= $$TMP_DIR
@@ -21,6 +20,7 @@ UI_DIR		= $$TMP_DIR
 
 # trash
 HEADERS += trash/trash.h
+INCLUDEPATH += trash/
 win32 {
 	SOURCES += trash/trash_win.cpp
 	LIBS += -ladvapi32 -lshell32
@@ -43,17 +43,30 @@ unix:!mac {
 	RESOURCES += native-skin-embedded.qrc
 
 	unix {
+		SRC_DIR=$$PWD
 		silver_skin.target = ../skins/silver.nzs
 		silver_skin.depends = skins/silver/*
-		silver_skin.commands =	mkdir ../skins ; cd $$TMP_DIR && \
-								cp -r ../skins/silver . && \
+		silver_skin.commands =	[ -d $$SRC_DIR/../skins ] || mkdir $$SRC_DIR/../skins && \
+								cd $$TMP_DIR && cp -r $$SRC_DIR/skins/silver . && \
 								cd silver && \
 								rm design.svg && \
-								zip ../../../skins/silver.nzs *
+								zip $$SRC_DIR/../skins/silver.nzs *
 		QMAKE_EXTRA_TARGETS += silver_skin
 		PRE_TARGETDEPS += $$silver_skin.target
 		#dirty hack for install
 		system($$silver_skin.commands)
+
+		metro_skin.target = ../skins/metro.nzs
+		metro_skin.depends = skins/metro/*
+		metro_skin.commands =	[ -d $$SRC_DIR/../skins ] || mkdir $$SRC_DIR/../skins && \
+		cd $$TMP_DIR && cp -r $$SRC_DIR/skins/metro . && \
+		cd metro && \
+		rm design.svg && \
+		zip $$SRC_DIR/../skins/metro.nzs *
+		QMAKE_EXTRA_TARGETS += metro_skin
+		PRE_TARGETDEPS += $$metro_skin.target
+		#dirty hack for install
+		system($$metro_skin.commands)
 	}
 } else {
 	DEFINES += _N_NO_SKINS_
@@ -108,16 +121,6 @@ build_pass:CONFIG(static, static|shared) {
 include(../3rdParty/qxt-0.6.1~reduced/src/gui/qxtglobalshortcut.pri)
 include(../3rdParty/qtsingleapplication-2.6.1/src/qtsingleapplication.pri)
 include(../3rdParty/qtiocompressor-2.3.1/src/qtiocompressor.pri)
-
-# tagReader
-unix {
-	CONFIG += link_pkgconfig
-	PKGCONFIG += taglib
-}
-win32 {
-	INCLUDEPATH += $(TAGLIB_DIR) $(TAGLIB_DIR)/include
-	LIBS += -L$(TAGLIB_DIR)/taglib/ -ltag
-}
 
 # qmake -config no-plugins
 !no-plugins {

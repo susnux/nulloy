@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -57,6 +57,16 @@ public:
 	Q_INVOKABLE void setSpacing(int spacing);
 	Q_INVOKABLE void setSpacingAt(int index, int spacing);
 	Q_INVOKABLE void insertWidget(int index, QWidget *widget);
+};
+
+class NSplitterPrototype : public QObject, public QScriptable
+{
+	Q_OBJECT
+
+	public:
+		NSplitterPrototype(QObject *parent = 0);
+		Q_INVOKABLE QList<int> sizes();
+		Q_INVOKABLE void setSizes(const QList<int> &list);
 };
 
 namespace NMarginsPrototype

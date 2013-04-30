@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -28,6 +28,7 @@ class NSettings : public QSettings
 private:
 	static NSettings *m_instance;
 	QList<NAction *> m_actionList;
+	void initValue(const QString &key, const QVariant &defaultValue);
 
 public:
 	NSettings(QObject *parent = 0);
@@ -39,7 +40,8 @@ public:
 	void loadShortcuts();
 	QList<NAction *> shortcuts();
 
-	void setValue(const QString &key, const QVariant &value);
+	Q_INVOKABLE QVariant value(const QString &key, const QVariant &defaultValue = QVariant());
+	Q_INVOKABLE void setValue(const QString &key, const QVariant &value);
 	void remove(const QString &key);
 
 signals:

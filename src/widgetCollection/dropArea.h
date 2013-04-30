@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -29,11 +29,12 @@ class NDropArea : public QWidget
 public:
 	NDropArea(QWidget *parent = 0, Qt::WindowFlags f = 0);
 
-private:
-	void dragEnterEvent(QDragEnterEvent *event);
-	void dragMoveEvent(QDragMoveEvent *event);
-	void dragLeaveEvent(QDragLeaveEvent *event);
-	void dropEvent(QDropEvent *event);
+protected:
+	QStringList mimeTypes() const;
+	virtual void dragEnterEvent(QDragEnterEvent *event);
+	virtual void dragMoveEvent(QDragMoveEvent *event);
+	virtual void dragLeaveEvent(QDragLeaveEvent *event);
+	virtual void dropEvent(QDropEvent *event);
 
 signals:
 	void filesDropped(const QStringList &file);

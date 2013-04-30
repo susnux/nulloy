@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -41,7 +41,13 @@
 
 #include <QDebug>
 
-NMainWindow::NMainWindow(QWidget *parent) : QDialog(parent) {}
+NMainWindow::NMainWindow(QWidget *parent) : QDialog(parent)
+{
+#ifdef Q_WS_WIN
+	m_framelessShadow = FALSE;
+#endif
+}
+
 NMainWindow::~NMainWindow() {}
 
 void NMainWindow::init(const QString &uiFile)
@@ -68,7 +74,7 @@ void NMainWindow::init(const QString &uiFile)
 	waveformSlider->setBuilder(NPluginLoader::waveformPlugin());
 #else
 	NWaveformBuilderInterface *builder = dynamic_cast<NWaveformBuilderInterface *>(new NWaveformBuilderGstreamer());
-	dynamic_cast<NPluginInterface *>(builder)->init();
+	dynamic_cast<NPluginElementInterface *>(builder)->init();
 	waveformSlider->setBuilder(builder);
 #endif
 
@@ -102,21 +108,21 @@ void NMainWindow::toggleVisibility()
 
 void NMainWindow::loadSettings()
 {
-	QStringList posList = NSettings::instance()->value("GUI/Position").toStringList();
+	QStringList posList = NSettings::instance()->value("Position").toStringList();
 	if (!posList.isEmpty())
 		move(posList.at(0).toInt(), posList.at(1).toInt());
 
-	QStringList sizeList = NSettings::instance()->value("GUI/Size").toStringList();
+	QStringList sizeList = NSettings::instance()->value("Size").toStringList();
 	if (!sizeList.isEmpty())
 		resize(sizeList.at(0).toInt(), sizeList.at(1).toInt());
 	else
-		resize(430, 250);
+		resize(430, 350);
 }
 
 void NMainWindow::saveSettings()
 {
-	NSettings::instance()->setValue("GUI/Position", QStringList() << QString::number(pos().x()) << QString::number(pos().y()));
-	NSettings::instance()->setValue("GUI/Size", QStringList() << QString::number(width()) << QString::number(height()));
+	NSettings::instance()->setValue("Position", QStringList() << QString::number(pos().x()) << QString::number(pos().y()));
+	NSettings::instance()->setValue("Size", QStringList() << QString::number(width()) << QString::number(height()));
 }
 
 void NMainWindow::setTitle(QString title)
@@ -178,9 +184,49 @@ void NMainWindow::closeEvent(QCloseEvent *event)
 }
 
 #ifdef Q_WS_WIN
+bool _DwmIsCompositionEnabled()
+{
+	HMODULE library = LoadLibrary(L"dwmapi.dll");
+	bool result = false;
+	if (library) {
+		BOOL enabled = FALSE;
+		HRESULT (WINAPI *pFn)(BOOL *enabled) = (HRESULT (WINAPI *)(BOOL *enabled))(GetProcAddress(library, "DwmIsCompositionEnabled"));
+		result = SUCCEEDED(pFn(&enabled)) && enabled;
+		FreeLibrary(library);
+	}
+	return result;
+}
+
+void NMainWindow::setFramelessShadow(bool enabled)
+{
+	if (enabled != m_framelessShadow) {
+		m_framelessShadow = enabled;
+		updateFramelessShadow();
+	}
+}
+
+void NMainWindow::updateFramelessShadow()
+{
+	DWORD version = GetVersion();
+	DWORD major = (DWORD) (LOBYTE(LOWORD(version))); // major = 6 for vista/7/2008
+
+	if (_DwmIsCompositionEnabled() && m_framelessShadow && major == 6)
+		SetClassLongPtr(winId(), GCL_STYLE, GetClassLongPtr(winId(), GCL_STYLE) | CS_DROPSHADOW);
+	else
+		SetClassLongPtr(winId(), GCL_STYLE, GetClassLongPtr(winId(), GCL_STYLE) & ~CS_DROPSHADOW);
+
+	hide();
+	show();
+}
+
 bool NMainWindow::winEvent(MSG *message, long *result)
 {
-	return NW7TaskBar::winEvent(message, result);
+	if (message->message == WM_DWMCOMPOSITIONCHANGED) {
+		updateFramelessShadow();
+		return true;
+	} else {
+		return NW7TaskBar::winEvent(message, result);
+	}
 }
 #endif
 

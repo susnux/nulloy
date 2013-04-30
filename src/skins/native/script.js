@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -16,6 +16,7 @@
 function Program(player)
 {
 	try {
+		this.player = player;
 		this.mainWindow = player.mainWindow();
 		this.playbackEngine = player.playbackEngine();
 		this.playlistWidget = this.mainWindow.findChild("playlistWidget");
@@ -32,7 +33,6 @@ function Program(player)
 		this.prevButton.clicked.connect(this.playlistWidget.activatePrev);
 		this.nextButton.clicked.connect(this.playlistWidget.activateNext);
 
-		this.mainWindow.styleSheet = "";
 		this.playButton.setStandardIcon("media-playback-start", ":/trolltech/styles/commonstyle/images/media-play-16.png");
 		this.stopButton.setStandardIcon("media-playback-stop", ":/trolltech/styles/commonstyle/images/media-stop-16.png");
 		this.prevButton.setStandardIcon("media-skip-backward", ":/trolltech/styles/commonstyle/images/media-skip-backward-16.png");
@@ -59,6 +59,9 @@ function Program(player)
 
 		this.dropArea["filesDropped(const QStringList &)"].connect(this.playlistWidget["activateMediaList(const QStringList &)"]);
 		this.mainWindow.windowFlags = (this.mainWindow.windowFlags | Qt.WindowMinimizeButtonHint) ^ Qt.Dialog;
+
+		this.splitter = this.mainWindow.findChild("splitter");
+		this.splitter["splitterMoved(int, int)"].connect(this, "on_splitterMoved");
 
 		if (Q_WS == "mac") {
 			this.mainWindow.setAttribute(Qt.WA_MacBrushedMetal, true);
@@ -92,6 +95,16 @@ function Program(player)
 	} catch (err) {
 		print("QtScript: " + err);
 	}
+}
+
+Program.prototype.afterShow = function()
+{
+	this.splitter.setSizes(this.player.settings().value("NativeSkin/Splitter"));
+}
+
+Program.prototype.on_splitterMoved = function(pos, index)
+{
+	this.player.settings().setValue("NativeSkin/Splitter", this.splitter.sizes());
 }
 
 Program.prototype.on_stateChanged = function(state)

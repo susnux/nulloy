@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -38,17 +38,14 @@ public:
 	void setData(int role, const QVariant &value);
 };
 
-#include <QItemDelegate>
+#include <QStyledItemDelegate>
 
-class NPlaylistItemDelegate : public QItemDelegate
+class NPlaylistItemDelegate : public QStyledItemDelegate
 {
-	Q_OBJECT
-
 public:
-	NPlaylistItemDelegate(QWidget *parent = 0) : QItemDelegate(parent) {}
+	NPlaylistItemDelegate(QWidget *parent = 0) : QStyledItemDelegate(parent) {}
 	void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
 };
-
 
 #endif
 

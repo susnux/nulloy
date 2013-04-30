@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -19,48 +19,74 @@
 
 NLabel::NLabel(QWidget* parent) : QLabel(parent)
 {
-	mShadowOffset = QPoint(0, 0);
-	mEnabled = FALSE;
-	mShadowColor = Qt::gray;
+	m_shadowOffset = QPoint(0, 0);
+	m_enabled = FALSE;
+	m_shadowColor = Qt::gray;
+	m_elideMode = Qt::ElideRight;
+}
+
+void NLabel::setText(const QString &text)
+{
+	QLabel::setText(text);
+	updateElidedText();
+}
+
+void NLabel::setElideMode(Qt::TextElideMode mode)
+{
+	m_elideMode = mode;
 }
 
 bool NLabel::shadowEnabled() const
 {
-	return mEnabled;
+	return m_enabled;
 }
 
 void NLabel::setShadowEnabled(bool enabled)
 {
-	if (mEnabled != enabled) {
-		mEnabled = enabled;
+	if (m_enabled != enabled) {
+		m_enabled = enabled;
 		update();
 	}
 }
 
 QPoint NLabel::shadowOffset() const
 {
-	return mShadowOffset;
+	return m_shadowOffset;
 }
 
 void NLabel::setShadowOffset(const QPoint &offset)
 {
-	if (mShadowOffset != offset) {
-		mShadowOffset = offset;
+	if (m_shadowOffset != offset) {
+		m_shadowOffset = offset;
 		update();
 	}
 }
 
 QColor NLabel::shadowColor() const
 {
-	return mShadowColor;
+	return m_shadowColor;
 }
 
 void NLabel::setShadowColor(QColor color)
 {
-	if (mShadowColor != color) {
-		mShadowColor = color;
+	if (m_shadowColor != color) {
+		m_shadowColor = color;
 		update();
 	}
+}
+
+void NLabel::resizeEvent(QResizeEvent *event)
+{
+	Q_UNUSED(event);
+	updateElidedText();
+}
+
+void NLabel::updateElidedText()
+{
+	m_elidedText = fontMetrics().elidedText(text(), m_elideMode, width(), Qt::TextShowMnemonic);
+	int error = fontMetrics().width(m_elidedText) - width();
+	if (error > 0)
+		m_elidedText = fontMetrics().elidedText(text(), m_elideMode, width() - error - fontMetrics().width("#"), Qt::TextShowMnemonic);
 }
 
 void NLabel::paintEvent(QPaintEvent *event)
@@ -68,16 +94,19 @@ void NLabel::paintEvent(QPaintEvent *event)
 	Q_UNUSED(event);
 
 	QPainter painter;
-	painter.setFont(font());
-	if (mEnabled && mShadowOffset != QPoint(0, 0)) {
+
+	if (painter.isActive())
+		painter.setFont(font());
+
+	if (m_enabled && m_shadowOffset != QPoint(0, 0)) {
 		painter.begin(this);
-		painter.setPen(QPen(mShadowColor));
-		painter.drawText(rect().translated(mShadowOffset), alignment(), text());
+		painter.setPen(QPen(m_shadowColor));
+		painter.drawText(rect().translated(m_shadowOffset), alignment(), m_elidedText);
 		painter.end();
 	}
 
 	painter.begin(this);
-	painter.drawText(rect(), alignment(), text());
+	painter.drawText(rect(), alignment(), m_elidedText);
 	painter.end();
 }
 

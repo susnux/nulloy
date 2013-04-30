@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -21,6 +21,7 @@
 #include "waveformSlider.h"
 #include "preferencesDialog.h"
 #include "playlistWidget.h"
+#include "trackInfoWidget.h"
 #include "mainWindow.h"
 #include "logDialog.h"
 
@@ -40,9 +41,13 @@ private:
 	NPlaybackEngineInterface *m_playbackEngine;
 	QMenu *m_contextMenu;
 	NPlaylistWidget *m_playlistWidget;
+	NTrackInfoWidget *m_trackInfoWidget;
 	NLogDialog *m_logDialog;
 	QString m_localPlaylist;
 	QNetworkAccessManager *m_networkManager;
+	QTimer *m_trayIconDoubleClickTimer;
+	bool m_trayIconDoubleClickCheck;
+	QWidget *m_waveformSlider;
 
 public:
 	NPlayer();
@@ -50,12 +55,12 @@ public:
 
 	Q_INVOKABLE NMainWindow* mainWindow();
 	Q_INVOKABLE NPlaybackEngineInterface* playbackEngine();
+	Q_INVOKABLE NSettings* settings();
 
 private slots:
 	void loadSettings();
 	void saveSettings();
 
-	void restorePlaylist();
 	void savePlaylist();
 
 	void preferencesDialogSettingsChanged();
@@ -68,6 +73,9 @@ private slots:
 	void versionOnlineFetch();
 	void on_networkManager_finished(QNetworkReply *reply);
 	void loadNextActionTriggered();
+	void trayIconDoubleClick_timeout();
+	void trackIcon_clicked(int clicks);
+	void waveformSliderToolTip(int x, int y);
 
 public slots:
 	void quit();
@@ -76,6 +84,7 @@ public slots:
 	void showSavePlaylistDialog();
 	void showContextMenu(QPoint pos);
 	void message(const QString &str);
+	void restorePlaylist();
 };
 
 #endif

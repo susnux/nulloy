@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -33,12 +33,8 @@ namespace NSkinLoader
 	QMap<int, QString> _identifiers;
 	QString _uiFormFile;
 	QString _scriptFile;
-#ifdef Q_WS_MAC
-	QString _skinPrefer = "Native";
-#else
-	QString _skinPrefer = "Silver";
-#endif
-	QString _skinSuffix= "nzs";
+	QString _skinPrefer = "Metro";
+	QString _skinSuffix = "nzs";
 
 	bool _nextFile(QFile &zipFile, QString &fileName, QByteArray &data);
 	void _loadSkins();
@@ -88,14 +84,16 @@ void NSkinLoader::_loadSkins()
 	_init = TRUE;
 
 	QStringList skinsDirList;
-	skinsDirList << ":skins" << "skins";
+	skinsDirList << ":skins" << QCoreApplication::applicationDirPath() + "/skins";
 #ifndef Q_WS_WIN
 	if (NCore::rcDir() != QCoreApplication::applicationDirPath())
 		skinsDirList << NCore::rcDir() + "/skins";
-	if (QDir(QCoreApplication::applicationDirPath()).dirName() == "bin")
-		skinsDirList << "../share/nulloy/skins";
+	if (QDir(QCoreApplication::applicationDirPath()).dirName() == "bin") {
+		QDir dir(QCoreApplication::applicationDirPath());
+		dir.cd("../share/nulloy/skins");
+		skinsDirList << dir.absolutePath();
+	}
 #endif
-
 	QFileInfoList containersInfoList;
 	foreach (QString dirStr, skinsDirList) {
 		QDir dir(dirStr);
@@ -149,7 +147,7 @@ void NSkinLoader::_loadSkins()
 		_identifiers.insert(i, id);
 	}
 
-	QString skinStr = NSettings::instance()->value("GUI/Skin").toString();
+	QString skinStr = NSettings::instance()->value("Skin").toString();
 	QStringList values = _identifiers.values();
 	int index;
 	index = values.indexOf("Nulloy/Skin/" + skinStr);
@@ -207,7 +205,7 @@ void NSkinLoader::_loadSkins()
 		}
 	}
 
-	NSettings::instance()->setValue("GUI/Skin", _identifiers.value(index).section('/', 2));
+	NSettings::instance()->setValue("Skin", _identifiers.value(index).section('/', 2));
 }
 
 QStringList NSkinLoader::skinIdentifiers()

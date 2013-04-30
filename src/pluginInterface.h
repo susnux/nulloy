@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -20,17 +20,14 @@
 
 class NPluginInterface
 {
-protected:
-	bool m_init;
-
 public:
-	NPluginInterface() { m_init = FALSE; }
+	NPluginInterface() {}
 	virtual ~NPluginInterface() {}
-	virtual QString identifier() = 0;
-	virtual QString interface() = 0;
-	virtual void init() = 0;
+	virtual QObjectList elements() = 0;
+	virtual QString name() = 0;
+	virtual QString version() = 0;
 };
 
-Q_DECLARE_INTERFACE(NPluginInterface, "Nulloy/PluginInterface/0.1")
+Q_DECLARE_INTERFACE(NPluginInterface, "Nulloy/NPluginInterface/0.5")
 
 #endif

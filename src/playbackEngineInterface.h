@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -19,7 +19,7 @@
 #include <QtCore>
 #include <QMessageBox>
 
-#define PLAYBACK_INTERFACE "Nulloy/PlaybackEngineInterface/0.1"
+#define PLAYBACK_INTERFACE "Nulloy/NPlaybackEngineInterface/0.5"
 
 class NPlaybackEngineInterface : public QObject
 {
@@ -59,6 +59,7 @@ signals:
 	virtual void finished() = 0;
 	virtual void failed() = 0;
 	virtual void stateChanged(int state) = 0;
+	virtual void tick(qint64 msec) = 0;
 };
 
 Q_DECLARE_INTERFACE(NPlaybackEngineInterface, PLAYBACK_INTERFACE)

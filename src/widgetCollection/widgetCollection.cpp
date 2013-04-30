@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -52,6 +52,7 @@ NWidgetCollection::NWidgetCollection(QObject *parent) : QObject(parent)
 {
 	m_plugins.push_back(new NDropAreaPlugin(this));
 	m_plugins.push_back(new NWaveformSliderPlugin(this));
+	m_plugins.push_back(new QSizeGripPlugin(this));
 	m_plugins.push_back(new NSliderPlugin(this));
 	m_plugins.push_back(new NPlaylistWidgetPlugin(this));
 	m_plugins.push_back(new NLabelPlugin(this));

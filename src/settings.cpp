@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -23,6 +23,8 @@
 
 #include <QDebug>
 
+#define MIN_VERSION "0.4.5"
+
 NSettings *NSettings::m_instance = NULL;
 
 NSettings::NSettings(QObject *parent)
@@ -33,28 +35,37 @@ NSettings::NSettings(QObject *parent)
 	Q_ASSERT_X(!m_instance, "NSettings", "NSettings instance already exists.");
 	m_instance = this;
 
-	if (!QFileInfo(this->fileName()).exists()) {
-		setValue("Shortcuts/playAction", QStringList() << "X" << "C" << "Space");
-		setValue("Shortcuts/stopAction", "V");
-		setValue("Shortcuts/prevAction", "Z");
-		setValue("Shortcuts/nextAction", "B");
-
-		setValue("GUI/PlaylistTitleFormat", "%a - %t (%d)");
-		setValue("GUI/WindowTitleFormat", "\"%a - %t\" - " + QCoreApplication::applicationName() + " %v");
+	QString version = value("SettingsVersion").toString();
+	if (version.isEmpty() || version < MIN_VERSION) {
+		foreach (QString key, allKeys())
+			remove(key);
+		setValue("SettingsVersion", MIN_VERSION);
 	}
 
-	setValue("GUI/MinimizeToTray", value("GUI/MinimizeToTray", FALSE).toBool());
-	setValue("GUI/TrayIcon", value("GUI/TrayIcon", FALSE).toBool());
-	setValue("GUI/AlwaysOnTop", value("GUI/AlwaysOnTop", FALSE).toBool());
-	setValue("GUI/WhilePlayingOnTop", value("GUI/WhilePlayingOnTop", FALSE).toBool());
-	setValue("RestorePlayback", value("RestorePlayback", TRUE).toBool());
-	setValue("SingleInstanse", value("SingleInstanse", TRUE).toBool());
-	setValue("AutoCheckUpdates", value("AutoCheckUpdates", TRUE).toBool());
-	setValue("DisplayLogDialog", value("DisplayLogDialog", TRUE).toBool());
-	setValue("LastDirectory", value("LastDirectory", QDesktopServices::storageLocation(QDesktopServices::MusicLocation)).toString());
-	setValue("LoadNext", value("LoadNext", FALSE).toBool());
-	setValue("LoadNextSort", value("LoadNextSort", QDir::Name).toInt());
-	setValue("Volume", value("Volume", 0.8).toFloat());
+	initValue("Shortcuts/playAction", QStringList() << "X" << "C" << "Space");
+	initValue("Shortcuts/stopAction", "V");
+	initValue("Shortcuts/prevAction", "Z");
+	initValue("Shortcuts/nextAction", "B");
+
+	initValue("PlaylistTrackInfo", "%F (%d)");
+	initValue("WindowTitleTrackInfo","\"{%a - %t|%F}\" - " + QCoreApplication::applicationName() + " %v");
+
+	initValue("MinimizeToTray", FALSE);
+	initValue("TrayIcon", FALSE);
+	initValue("AlwaysOnTop", FALSE);
+	initValue("WhilePlayingOnTop", FALSE);
+	initValue("RestorePlayback", TRUE);
+	initValue("SingleInstanse", TRUE);
+	initValue("AutoCheckUpdates", TRUE);
+	initValue("DisplayLogDialog", TRUE);
+	initValue("LastDirectory", QDesktopServices::storageLocation(QDesktopServices::MusicLocation));
+	initValue("LoadNext", FALSE);
+	initValue("LoadNextSort", QDir::Name);
+	initValue("Volume", 0.8);
+
+	initValue("TrackInfo/TopLeft", "{%B kbps/%s kHz|}");
+	initValue("TrackInfo/MiddleCenter", "{%a - %t|%F}");
+	initValue("TrackInfo/BottomRight", "%T/%d");
 }
 
 NSettings::~NSettings()
@@ -106,10 +117,7 @@ void NSettings::saveShortcuts()
 				if (!seq.isEmpty())
 					keyStrings << seq.toString();
 			}
-			if (!keyStrings.isEmpty())
-				settings->setValue(name, keyStrings);
-			else
-				settings->remove(name);
+			settings->setValue(name, keyStrings);
 		}
 	};
 
@@ -126,19 +134,21 @@ QList<NAction *> NSettings::shortcuts()
 	return m_actionList;
 }
 
+QVariant NSettings::value(const QString &key, const QVariant &defaultValue)
+{
+	QVariant value = QSettings::value(key, defaultValue);
+	return value;
+}
+
 void NSettings::setValue(const QString &key, const QVariant &value)
 {
-	if ((value.type() == QVariant::String && value.toString().isEmpty()) ||
-		(value.type() == QVariant::StringList && value.toStringList().isEmpty()) ||
-		(value.type() == QVariant::List && value.toList().isEmpty()))
-	{
-		QSettings::remove(key);
-		emit valueChanged(key, QString());
-		return;
-	}
-
 	QSettings::setValue(key, value);
 	emit valueChanged(key, value);
+}
+
+void NSettings::initValue(const QString &key, const QVariant &defaultValue)
+{
+	setValue(key, value(key, defaultValue));
 }
 
 void NSettings::remove(const QString &key)

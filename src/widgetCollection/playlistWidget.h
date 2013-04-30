@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -18,27 +18,45 @@
 
 #include "playlistItem.h"
 #include "m3uPlaylist.h"
+#include "tagReaderInterface.h"
+
+#include <QPointer>
 #include <QListWidget>
 
 class NPlaylistWidget : public QListWidget
 {
 	Q_OBJECT
+	Q_PROPERTY(QColor failedTextColor READ getFailedTextColor WRITE setFailedTextColor DESIGNABLE true)
+	Q_PROPERTY(QColor currentTextColor READ getCurrentTextColor WRITE setCurrentTextColor DESIGNABLE true)
 
 private:
 	NPlaylistItem *m_currentItem;
 	QMenu *m_contextMenu;
+	NTagReaderInterface *m_tagReader;
 
 	void contextMenuEvent(QContextMenuEvent *event);
+	void setCurrentRow(int row);
 	void setCurrentItem(NPlaylistItem *item);
 	void activateItem(NPlaylistItem *item);
 	NPlaylistItem* createItemFromPath(const QString &file);
 	NPlaylistItem* createItemFromM3uItem(NM3uItem item);
-	bool dropMimeData(int index, const QMimeData *data, Qt::DropAction action);
+
+// DRAG & DROP >>
+	QPointer<QDrag> m_drag;
+	QList<QUrl> m_mimeDataUrls;
 	QStringList mimeTypes() const;
+	QMimeData* mimeData(const QList<NPlaylistItem *> items) const;
+	bool dropMimeData(int index, const QMimeData *data, Qt::DropAction action);
 #ifdef Q_WS_MAC
 	Qt::DropActions supportedDropActions() const;
 #endif
-	QMimeData* mimeData(const QList<NPlaylistItem *> items) const;
+protected:
+	void dropEvent(QDropEvent *event);
+	void dragEnterEvent(QDragEnterEvent *event);
+	void dragMoveEvent(QDragMoveEvent *event);
+	void dragLeaveEvent(QDragLeaveEvent *event);
+	void mouseMoveEvent(QMouseEvent *event);
+// << DRAG & DROP
 
 public:
 	NPlaylistWidget(QWidget *parent = 0);
@@ -48,7 +66,9 @@ public:
 
 	QStringList mediaList();
 	int currentRow();
+	QModelIndex currentIndex() const;
 	QString currentTitle();
+	void setTagReader(NTagReaderInterface *tagReader);
 
 public slots:
 	void activateFirst();
@@ -56,7 +76,6 @@ public slots:
 	void activatePrev();
 	void activateCurrent();
 	void setCurrentFailed();
-	void setCurrentRow(int row);
 	void activateRow(int row);
 	void appendMediaList(const QStringList &pathList);
 	void setMediaList(const QStringList &pathList);
@@ -74,6 +93,20 @@ signals:
 	void currentActivated();
 	void mediaSet(const QString &file);
 	void closed();
+	void activateEmptyFail();
+
+// STYLESHEET PROPERTIES >>
+private:
+	QColor m_failedTextColor;
+	QColor m_currentTextColor;
+
+public:
+	QColor getFailedTextColor();
+	void setFailedTextColor(QColor color);
+
+	QColor getCurrentTextColor();
+	void setCurrentTextColor(QColor color);
+// << STYLESHEET PROPERTIES
 };
 
 #endif

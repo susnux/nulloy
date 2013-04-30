@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -19,7 +19,7 @@
 #include <QtCore>
 #include "waveformPeaks.h"
 
-#define WAVEFORM_INTERFACE "Nulloy/WaveformBuilderInterface/0.2"
+#define WAVEFORM_INTERFACE "Nulloy/NWaveformBuilderInterface/0.5"
 
 class NWaveformBuilderInterface : public QThread
 {

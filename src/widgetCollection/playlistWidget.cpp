@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -18,7 +18,6 @@
 #include "settings.h"
 #include "core.h"
 #include "trash.h"
-#include "tagReader.h"
 
 #include <QtGui>
 
@@ -49,6 +48,13 @@ NPlaylistWidget::NPlaylistWidget(QWidget *parent) : QListWidget(parent)
 	m_contextMenu = new QMenu(this);
 	m_contextMenu->addAction(removeAction);
 	m_contextMenu->addAction(trashAction);
+
+	m_drag = NULL;
+}
+
+void NPlaylistWidget::setTagReader(NTagReaderInterface *tagReader)
+{
+	m_tagReader = tagReader;
 }
 
 void NPlaylistWidget::contextMenuEvent(QContextMenuEvent *event)
@@ -82,7 +88,7 @@ void NPlaylistWidget::moveToTrash()
 		QListWidgetItem *takenItem = takeItem(row(item));
 		delete takenItem;
 	}
-	update();
+	viewport()->update();
 }
 
 void NPlaylistWidget::removeFromPlaylist()
@@ -91,7 +97,7 @@ void NPlaylistWidget::removeFromPlaylist()
 		QListWidgetItem *takenItem = takeItem(row(item));
 		delete takenItem;
 	}
-	update();
+	viewport()->update();
 }
 
 NPlaylistWidget::~NPlaylistWidget() {}
@@ -118,17 +124,21 @@ void NPlaylistWidget::setCurrentItem(NPlaylistItem *item)
 		return;
 	}
 
-	NTagReader tagReader(file);
-	if (tagReader.isValid()) {
-		item->setText(tagReader.toString(NSettings::instance()->value("GUI/PlaylistTitleFormat").toString()));
-		item->setData(NPlaylistItem::DurationRole, tagReader.toString("%D").toInt());
+	// trying to read tags
+	m_tagReader->setSource(file);
+	if (m_tagReader->isValid()) {
+		item->setText(m_tagReader->toString(NSettings::instance()->value("PlaylistTrackInfo").toString()));
+		item->setData(NPlaylistItem::DurationRole, m_tagReader->toString("%D").toInt());
 	} else {
 		item->setText(fileName);
 	}
+
+	// reset failed role
 	item->setData(NPlaylistItem::FailedRole, FALSE);
 
+	// setting currently playing font to bold, colors set in delegate
 	QFont f = item->font();
-	if (m_currentItem) {
+	if (m_currentItem) { // reset old item to defaults
 		f.setBold(FALSE);
 		m_currentItem->setFont(f);
 	}
@@ -136,7 +146,7 @@ void NPlaylistWidget::setCurrentItem(NPlaylistItem *item)
 	item->setFont(f);
 
 	scrollToItem(item);
-	m_currentItem = item;
+	m_currentItem = item;update();
 
 	emit mediaSet(file);
 }
@@ -152,6 +162,14 @@ int NPlaylistWidget::currentRow()
 		return row(m_currentItem);
 	else
 		return -1;
+}
+
+QModelIndex NPlaylistWidget::currentIndex() const
+{
+	if (m_currentItem)
+		return indexFromItem(m_currentItem);
+	else
+		return QModelIndex();
 }
 
 QString NPlaylistWidget::currentTitle()
@@ -179,7 +197,10 @@ void NPlaylistWidget::activateRow(int row)
 
 void NPlaylistWidget::activateItem(NPlaylistItem *item)
 {
-	emit itemActivated(item);
+	if (count() > 0)
+		emit itemActivated(item);
+	else
+		emit activateEmptyFail();
 }
 
 void NPlaylistWidget::on_itemActivated(QListWidgetItem *item)
@@ -310,6 +331,14 @@ NPlaylistItem* NPlaylistWidget::createItemFromM3uItem(NM3uItem m3uItem)
 	return item;
 }
 
+NPlaylistItem* NPlaylistWidget::item(int row)
+{
+	return dynamic_cast<NPlaylistItem *>(QListWidget::item(row));
+}
+
+
+// DRAG & DROP >>
+
 bool NPlaylistWidget::dropMimeData(int index, const QMimeData *data, Qt::DropAction action)
 {
 	Q_UNUSED(action);
@@ -321,6 +350,7 @@ bool NPlaylistWidget::dropMimeData(int index, const QMimeData *data, Qt::DropAct
 		}
 	}
 
+	m_drag = NULL;
 	return TRUE;
 }
 
@@ -341,19 +371,101 @@ Qt::DropActions NPlaylistWidget::supportedDropActions() const
 QMimeData* NPlaylistWidget::mimeData(const QList<NPlaylistItem *> items) const
 {
 	QList<QUrl> urls;
-
 	foreach (NPlaylistItem *item, items)
 		urls << QUrl::fromLocalFile(item->data(NPlaylistItem::PathRole).toString());
 
-	QMimeData *data = new QMimeData();
+	QPointer<QMimeData> data = new QMimeData();
 	data->setUrls(urls);
 
 	return data;
 }
 
-NPlaylistItem* NPlaylistWidget::item(int row)
+void NPlaylistWidget::mouseMoveEvent(QMouseEvent *event)
 {
-	return dynamic_cast<NPlaylistItem *>(QListWidget::item(row));
+	if (!(event->buttons() & Qt::LeftButton))
+		return;
+
+	if (!itemAt(event->pos())) {
+		selectionModel()->clearSelection();
+		return;
+	}
+
+	if (selectedItems().isEmpty())
+		return;
+
+	QList<QUrl> urls;
+	urls << QUrl::fromLocalFile(currentItem()->data(NPlaylistItem::PathRole).toString());
+
+	QMimeData *mimeData = new QMimeData;
+	mimeData->setUrls(urls);
+	m_mimeDataUrls.clear();
+
+	m_drag = new QDrag(this);
+	m_drag->setMimeData(mimeData);
+	// restrct to move action
+	m_drag->start(Qt::MoveAction);
 }
+
+void NPlaylistWidget::dropEvent(QDropEvent *event)
+{
+	// change to move action
+	event->setDropAction(Qt::MoveAction);
+	QListWidget::dropEvent(event);
+}
+
+void NPlaylistWidget::dragEnterEvent(QDragEnterEvent *event)
+{
+	if (m_drag && !m_mimeDataUrls.isEmpty())
+		m_drag->mimeData()->setUrls(m_mimeDataUrls); // recover old data
+
+	// change to move action
+	event->setDropAction(Qt::MoveAction);
+	QListWidget::dragEnterEvent(event);
+}
+
+void NPlaylistWidget::dragMoveEvent(QDragMoveEvent *event)
+{
+	// change to move action
+	event->setDropAction(Qt::MoveAction);
+	QListWidget::dragMoveEvent(event);
+}
+
+void NPlaylistWidget::dragLeaveEvent(QDragLeaveEvent *event)
+{
+	if (m_drag) {
+		m_mimeDataUrls = m_drag->mimeData()->urls(); // backup
+
+		// forbid drag outside, set dummy mime data
+		m_drag->mimeData()->clear();
+	}
+	event->ignore();
+}
+
+// << DRAG & DROP
+
+
+// STYLESHEET PROPERTIES >>
+
+void NPlaylistWidget::setCurrentTextColor(QColor color)
+{
+	m_currentTextColor = color;
+}
+
+QColor NPlaylistWidget::getCurrentTextColor()
+{
+	return m_currentTextColor;
+}
+
+void NPlaylistWidget::setFailedTextColor(QColor color)
+{
+	m_failedTextColor = color;
+}
+
+QColor NPlaylistWidget::getFailedTextColor()
+{
+	return m_failedTextColor;
+}
+
+// << STYLESHEET PROPERTIES
 
 /* vim: set ts=4 sw=4: */

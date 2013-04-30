@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This skin package including all images, cascading style sheets,
 **  UI forms, and JavaScript files are released under
@@ -15,6 +15,7 @@
 function Program(player)
 {
 	try {
+		this.player = player;
 		this.mainWindow = player.mainWindow();
 		this.playbackEngine = player.playbackEngine();
 		this.playlistWidget = this.mainWindow.findChild("playlistWidget");
@@ -25,6 +26,7 @@ function Program(player)
 		this.nextButton = this.mainWindow.findChild("nextButton");
 		this.volumeSlider = this.mainWindow.findChild("volumeSlider");
 		this.waveformSlider = this.mainWindow.findChild("waveformSlider");
+		this.sizeGrip = this.mainWindow.findChild("sizeGrip");
 		this.playlistToggleButton = this.mainWindow.findChild("playlistToggleButton");
 		this.shadowWidget = this.mainWindow.findChild("shadowWidget");
 		this.closeButton = this.mainWindow.findChild("closeButton");
@@ -56,28 +58,25 @@ function Program(player)
 		this.playbackEngine["positionChanged(qreal)"].connect(this, "waveformSlide_setValue");
 
 		this.dropArea["filesDropped(const QStringList &)"].connect(this.playlistWidget["activateMediaList(const QStringList &)"]);
-
 		this.mainWindow.windowFlags = (this.mainWindow.windowFlags | Qt.FramelessWindowHint | Qt.WindowCloseButtonHint) ^ (Qt.WindowTitleHint | Qt.Dialog);
 
 		this.closeButton.clicked.connect(this.mainWindow.close);
 		this.minimizeButton.clicked.connect(this.mainWindow.minimize);
 
-		this.titleLabel.shadowEnabled = true;
-		this.titleLabel.setShadowColor("#FFFFFF");
-		this.titleLabel.setShadowOffset(0, 1);
-
 		this.mainWindow["newTitle(const QString &)"].connect(this, "setTitle");
 		this.mainWindow.resized.connect(this, "on_resized");
 
-	/*	this.playlistToggleButton.clicked.connect(this, "on_playlistToggleButtonClicked");
+		this.playlistToggleButton.hide();
+		this.playlistToggleButton.clicked.connect(this, "on_playlistToggleButtonClicked");
 		this.playlistToggleButton.setParent(this.playlistWidget);
 		this.playlistToggleButton.setParent(this.dropArea);
-		this.playlistToggleButton.show();*/
-		this.playlistToggleButton.hide();
 
 		this.shadowWidget.setParent(this.dropArea);
 		this.shadowWidget.setParent(this.playlistWidget);
 		this.shadowWidget.show();
+
+		this.splitter = this.mainWindow.findChild("splitter");
+		this.splitter["splitterMoved(int, int)"].connect(this, "on_splitterMoved");
 
 		if (Q_WS == "mac") {
 			this.mainWindow.setAttribute(Qt.WA_MacBrushedMetal, true);
@@ -90,22 +89,40 @@ function Program(player)
 			borderWidget.styleSheet = "#borderWidget { background: #6e6e6e; }"
 
 			var dropAreaMargins = this.dropArea.layout().contentsMargins();
-			dropAreaMargins.bottom = 5;
-			this.dropArea.layout().setContentsMargins(dropAreaMargins);
-			this.dropArea.layout().setSpacingAt(3, 6);
 
 			var titleLabel = this.mainWindow.findChild("titleLabel");
 			titleLabel.setFontSize(12);
 
+			this.sizeGrip.setParent(borderWidget);
+		} else {
+			this.sizeGrip.hide();
+			this.mainWindow.setSizeGripEnabled(true);
+		}
+
+		/*if (Q_WS == "win")
+			this.mainWindow.setFramelessShadow(true);*/
+
+		if (WS_BUTTOS_SIDE == "left") {
 			var titleBarlLayout = this.mainWindow.findChild("titleBarlLayout");
-			titleBarlLayout.insertWidget(0, this.closeButton);
-			titleBarlLayout.insertWidget(1, this.minimizeButton);
+			titleBarlLayout.insertWidget(0, this.mainWindow.findChild("closeWrapperOuter"));
+			titleBarlLayout.insertWidget(1, this.mainWindow.findChild("minimizeWrapperOuter"));
 			titleBarlLayout.insertWidget(5, this.mainWindow.findChild("iconLabel"));
 		}
-		this.mainWindow.setSizeGripEnabled(true);
 	} catch (err) {
 		print("QtScript: " + err);
 	}
+}
+
+Program.prototype.afterShow = function()
+{
+	if (this.player.settings().value("SilverSkin/PlaylistVisible", true) == 'false') {
+		this.player.settings().setValue("SilverSkin/PlaylistVisible", false);
+		this.playlistWidget.hide();
+		this.mainWindow.minimumHeight = this.mainWindow.maximumHeight = this.maximumHeight;
+		this.mainWindow.resize(this.mainWindow.width, this.mainWindow.minimumHeigh);
+	}
+
+	this.splitter.setSizes(this.player.settings().value("SilverSkin/Splitter"));
 }
 
 Program.prototype.on_stateChanged = function(state)
@@ -127,21 +144,34 @@ Program.prototype.on_failed = function()
 Program.prototype.on_resized = function()
 {
 	this.playlistToggleButton.move(this.playlistToggleButton.parentWidget().width -
-									this.playlistToggleButton.width - 30,
+									this.playlistToggleButton.width - 40,
 									this.playlistToggleButton.parentWidget().height -
 									this.playlistToggleButton.height);
+
+	if (Q_WS == "mac") {
+		this.sizeGrip.move(this.sizeGrip.parentWidget().width -
+							this.sizeGrip.width - 5,
+							this.sizeGrip.parentWidget().height -
+							this.sizeGrip.height - 4);
+	}
 
 	this.shadowWidget.resize(this.playlistWidget.width, this.shadowWidget.height);
 }
 
 Program.prototype.on_playlistToggleButtonClicked = function()
 {
+	this.player.settings().setValue("SilverSkin/PlaylistVisible", !this.playlistWidget.visible);
 	if (this.playlistWidget.visible) {
+		this.player.settings().setValue("SilverSkin/OldHeight", this.mainWindow.height);
 		this.playlistWidget.hide();
-		this.mainWindow.maximumHeight = 0;
+		this.mainWindow.minimumHeight = this.mainWindow.maximumHeight = this.maximumHeight;
+		this.mainWindow.resize(this.mainWindow.width, this.mainWindow.minimumHeigh);
 	} else {
+		var oldHeight = this.player.settings().value("SilverSkin/OldHeight", 250);
 		this.playlistWidget.show();
 		this.mainWindow.maximumHeight = 0xFFFFFF;
+		this.mainWindow.minimumHeight = 200;
+		this.mainWindow.resize(this.mainWindow.width, oldHeight);
 	}
 }
 
@@ -153,6 +183,11 @@ Program.prototype.on_volumeSlider_sliderMoved = function(value)
 Program.prototype.volumeSlider_setValue = function(value)
 {
 	this.volumeSlider.value = Math.round(value * this.volumeSlider.maximum);
+}
+
+Program.prototype.on_splitterMoved = function(pos, index)
+{
+	this.player.settings().setValue("SilverSkin/Splitter", this.splitter.sizes());
 }
 
 Program.prototype.on_waveformSlider_sliderMoved = function(value)

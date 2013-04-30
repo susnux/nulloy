@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -18,6 +18,7 @@
 
 #include <QDialog>
 #include "ui_preferencesDialog.h"
+#include "pluginElementInterface.h"
 
 class NPreferencesDialog : public QDialog
 {
@@ -26,6 +27,9 @@ class NPreferencesDialog : public QDialog
 private:
 	Ui::PreferencesDialog ui;
 	void showEvent(QShowEvent *event);
+	QGroupBox* generatePluginsGroup(PluginType type, const QStringList &identifiers, const QString &def = QString());
+	QString selectedPluginsGroup(PluginType type);
+	QMap<QString, QRadioButton *> m_pluginButtonsMap;
 
 public:
 	NPreferencesDialog(QWidget *parent = 0);
@@ -39,6 +43,8 @@ private slots:
 	void saveSettings();
 	void on_versionCheckButton_clicked();
 	void on_titleFormatHelpButton_clicked();
+	void pluginsChanged();
+	void on_skinComboBox_activated(int index);
 
 signals:
 	void settingsChanged();

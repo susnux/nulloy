@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -18,6 +18,7 @@
 #include "playlistWidget.h"
 #include "slider.h"
 #include "waveformSlider.h"
+#include <QSizeGrip>
 
 #include <QDesignerCustomWidgetCollectionInterface>
 #include <QDesignerCustomWidgetInterface>
@@ -92,6 +93,15 @@ class NWaveformSliderPlugin : public QObject, public NWidgetPlugin
 public:
 	NWaveformSliderPlugin(QObject *parent = 0) : QObject(parent), NWidgetPlugin(this->metaObject()->className()) {}
 	virtual QWidget *createWidget(QWidget *parent) { return new NWaveformSlider(parent); }
+};
+
+class QSizeGripPlugin : public QObject, public NWidgetPlugin
+{
+	Q_OBJECT
+
+public:
+	QSizeGripPlugin(QObject *parent = 0) : QObject(parent), NWidgetPlugin(this->metaObject()->className()) {}
+	virtual QWidget *createWidget(QWidget *parent) { return new QSizeGrip(parent); }
 };
 
 class NWidgetCollection: public QObject, public QDesignerCustomWidgetCollectionInterface

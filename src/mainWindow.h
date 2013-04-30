@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2011 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -41,7 +41,10 @@ private:
 	void mousePressEvent(QMouseEvent *event);
 	void mouseMoveEvent(QMouseEvent *event);
 	void resizeEvent(QResizeEvent *event);
+
 #ifdef Q_WS_WIN
+	bool m_framelessShadow;
+	void updateFramelessShadow();
 	bool winEvent(MSG *message, long *result);
 #endif
 
@@ -49,6 +52,9 @@ public:
 	NMainWindow(QWidget *parent = 0);
 	~NMainWindow();
 	void init(const QString &uiFile);
+#ifdef Q_WS_WIN
+	Q_INVOKABLE void setFramelessShadow(bool enabled);
+#endif
 
 public slots:
 	void setTitle(QString title);
