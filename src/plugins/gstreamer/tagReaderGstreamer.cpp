@@ -29,17 +29,18 @@ void NTagReaderGstreamer::init()
 	m_isValid = FALSE;
 	m_taglist = NULL;
 
+	QDir executable_path(QCoreApplication::applicationDirPath());
+
 #ifdef Q_WS_WIN
-	_putenv("GST_PLUGIN_PATH=Plugins\\GStreamer");
+	_putenv(QString("GST_PLUGIN_PATH=" + executable_path.absolutePath() + "/Plugins/GStreamer").replace('/', '\\').toUtf8());
 #endif
 
 #ifdef Q_WS_MAC
-	QDir executable_path(QCoreApplication::applicationDirPath());
 	if (executable_path.dirName() == "MacOS") {
 		executable_path.cd("GStreamer/plugins");
 		if (executable_path.exists())
 			putenv(QString("GST_PLUGIN_PATH=" + executable_path.absolutePath() +
-							":" + getenv("GST_PLUGIN_PATH")).toAscii().data());
+							":" + getenv("GST_PLUGIN_PATH")).toUtf8().data());
 	}
 #endif
 
@@ -120,15 +121,15 @@ QString NTagReaderGstreamer::parse(const QString &format, bool *success, bool st
 
 	QString res;
 	for (int i = 0; i < format.size(); ++i) {
-		gchar *gstr = NULL;
 		if (format.at(i) == '%') {
+			gchar *gstr = NULL;
 			++i;
 			QChar ch = format.at(i);
 			if (ch == 'a') {
 				if (!(*success = gst_tag_list_get_string(m_taglist, "artist", &gstr)))
 					res += "<Unknown artist>";
 				else
-					res += gstr;
+					res += QString::fromUtf8(gstr);
 			} else if (ch == 't') {
 				if (!(*success = gst_tag_list_get_string(m_taglist, "title", &gstr)))
 					res += "<Unknown title>";
@@ -138,17 +139,17 @@ QString NTagReaderGstreamer::parse(const QString &format, bool *success, bool st
 				if (!(*success = gst_tag_list_get_string(m_taglist, "album", &gstr)))
 					res += "<Unknown album>";
 				else
-					res += gstr;
+					res += QString::fromUtf8(gstr);
 			} else if (ch == 'c') {
 				if (!(*success = gst_tag_list_get_string(m_taglist, "comment", &gstr)))
 					res += "<Empty comment>";
 				else
-					res += gstr;
+					res += QString::fromUtf8(gstr);
 			} else if (ch == 'g') {
 				if (!(*success = gst_tag_list_get_string(m_taglist, "genre", &gstr)))
 					res += "<Unknown genre>";
 				else
-					res += gstr;
+					res += QString::fromUtf8(gstr);
 			} else if (ch == 'y') {
 				GDate *date = NULL;
 				QString str = "0";
@@ -219,6 +220,7 @@ QString NTagReaderGstreamer::parse(const QString &format, bool *success, bool st
 			} else {
 				res += ch;
 			}
+			g_free(gstr);
 		} else if (format.at(i) == '{') {
 			++i;
 			int matchedAt = format.indexOf('}', i);
