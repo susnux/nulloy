@@ -88,6 +88,7 @@ private slots:
 	void rowsAboutToBeRemoved(const QModelIndex &parent, int start, int end);
 	void moveToTrash();
 	void removeFromPlaylist();
+	void revealInFileManager();
 
 signals:
 	void currentActivated();
@@ -101,10 +102,10 @@ private:
 	QColor m_currentTextColor;
 
 public:
-	QColor getFailedTextColor();
+	QColor getFailedTextColor() const;
 	void setFailedTextColor(QColor color);
 
-	QColor getCurrentTextColor();
+	QColor getCurrentTextColor() const;
 	void setCurrentTextColor(QColor color);
 // << STYLESHEET PROPERTIES
 };
