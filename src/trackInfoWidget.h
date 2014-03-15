@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -16,12 +16,15 @@
 #ifndef N_TRACK_INFO_WIDGET_H
 #define N_TRACK_INFO_WIDGET_H
 
-#include <QGraphicsView>
-#include <QGraphicsProxyWidget>
-#include <QPropertyAnimation>
+#include <QWidget>
 #include <QMap>
 #include "ui_trackInfoWidget.h"
-#include "tagReaderInterface.h"
+
+class QGraphicsView;
+class QGraphicsScene;
+class QGraphicsProxyWidget;
+class QPropertyAnimation;
+class NTagReaderInterface;
 
 class NTrackInfoWidget : public QWidget
 {
@@ -58,4 +61,3 @@ public slots:
 
 #endif
 
-/* vim: set ts=4 sw=4: */

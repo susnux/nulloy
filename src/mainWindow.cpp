@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -15,9 +15,8 @@
 
 #include "mainWindow.h"
 
-#include "core.h"
+#include "common.h"
 #include "settings.h"
-#include "waveformSlider.h"
 #include "dropArea.h"
 
 #ifndef _N_NO_SKINS_
@@ -27,19 +26,23 @@
 
 #ifndef _N_NO_PLUGINS_
 #include "pluginLoader.h"
+#include "tagReaderInterface.h"
 #else
-#include "waveformBuilderGstreamer.h"
+#include "tagReaderGstreamer.h"
 #endif
 
 #ifdef Q_WS_WIN
 #include "w7TaskBar.h"
 #include <windows.h>
+#include <dwmapi.h>
 #endif
 
-#include <QLayout>
+#include <QEvent>
 #include <QIcon>
-
-#include <QDebug>
+#include <QLayout>
+#include <QWindowStateChangeEvent>
+#include <QToolTip>
+#include <QTime>
 
 NMainWindow::NMainWindow(QWidget *parent) : QDialog(parent)
 {
@@ -52,6 +55,8 @@ NMainWindow::~NMainWindow() {}
 
 void NMainWindow::init(const QString &uiFile)
 {
+	setObjectName("mainWindow");
+
 #ifndef _N_NO_SKINS_
 	QUiLoader loader;
 	QFile formFile(uiFile);
@@ -70,14 +75,11 @@ void NMainWindow::init(const QString &uiFile)
 	ui.setupUi(this);
 #endif
 
-	NWaveformSlider *waveformSlider = qFindChild<NWaveformSlider *>(this, "waveformSlider");
-#ifndef _N_NO_PLUGINS_
-	waveformSlider->setBuilder(NPluginLoader::waveformPlugin());
-#else
-	NWaveformBuilderInterface *builder = dynamic_cast<NWaveformBuilderInterface *>(new NWaveformBuilderGstreamer());
-	dynamic_cast<NPluginElementInterface *>(builder)->init();
-	waveformSlider->setBuilder(builder);
-#endif
+	m_oldPos = QPoint(-1, -1);
+	m_oldSize = QSize(-1, -1);
+
+	m_waveformSlider = qFindChild<QWidget *>(this, "waveformSlider");
+	connect(m_waveformSlider, SIGNAL(mouseMoved(int, int)), this, SLOT(waveformSliderToolTip(int, int)));
 
 	// enabling dragging window from any point
 	QList<QWidget *> widgets = findChildren<QWidget *>();
@@ -92,7 +94,7 @@ void NMainWindow::init(const QString &uiFile)
 	if (icon.isNull()) {
 		QStringList files = QDir(":").entryList(QStringList() << "icon-*", QDir::Files);
 		foreach (QString fileName, files)
-				icon.addFile(":" + fileName);
+			icon.addFile(":" + fileName);
 	}
 #else
 	icon.addFile(":icon-16.png");
@@ -110,26 +112,61 @@ void NMainWindow::toggleVisibility()
 void NMainWindow::loadSettings()
 {
 	QStringList posList = NSettings::instance()->value("Position").toStringList();
-	if (!posList.isEmpty())
-		move(posList.at(0).toInt(), posList.at(1).toInt());
+	if (!posList.isEmpty()) {
+		m_oldPos = QPoint(posList.at(0).toInt(), posList.at(1).toInt());
+		move(m_oldPos);
+	}
 
 	QStringList sizeList = NSettings::instance()->value("Size").toStringList();
 	if (!sizeList.isEmpty())
-		resize(sizeList.at(0).toInt(), sizeList.at(1).toInt());
+		m_oldSize = QSize(sizeList.at(0).toInt(), sizeList.at(1).toInt());
 	else
-		resize(430, 350);
+		m_oldSize = QSize(430, 350);
+
+	resize(m_oldSize);
+
+	bool maximized = NSettings::instance()->value("Maximized").toBool();
+	if (maximized)
+		showMaximized();
 }
 
 void NMainWindow::saveSettings()
 {
-	NSettings::instance()->setValue("Position", QStringList() << QString::number(pos().x()) << QString::number(pos().y()));
-	NSettings::instance()->setValue("Size", QStringList() << QString::number(width()) << QString::number(height()));
+	bool maximized = isMaximized();
+	NSettings::instance()->setValue("Maximized", maximized);
+
+	QPoint savePos;
+	QSize saveSize;
+	if (!maximized) {
+		savePos = pos();
+		saveSize = size();
+	} else {
+		savePos = m_oldPos;
+		saveSize = m_oldSize;
+	}
+
+	NSettings::instance()->setValue("Position", QStringList() << QString::number(savePos.x()) << QString::number(savePos.y()));
+	NSettings::instance()->setValue("Size", QStringList() << QString::number(saveSize.width()) << QString::number(saveSize.height()));
 }
 
 void NMainWindow::setTitle(QString title)
 {
 	setWindowTitle(title);
 	emit newTitle(title);
+}
+
+void NMainWindow::changeEvent(QEvent *event)
+{
+	if (event->type() == QEvent::WindowStateChange) {
+		QWindowStateChangeEvent *stateEvent = static_cast<QWindowStateChangeEvent *>(event);
+
+		if (stateEvent->oldState() == Qt::WindowNoState && isMaximized()) {
+			m_oldPos = pos();
+			m_oldSize = size();
+		}
+	}
+
+	QWidget::changeEvent(event);
 }
 
 bool NMainWindow::eventFilter(QObject *obj, QEvent *event)
@@ -231,9 +268,12 @@ bool NMainWindow::winEvent(MSG *message, long *result)
 }
 #endif
 
-void NMainWindow::minimize()
+void NMainWindow::toggleMaximize()
 {
-	setWindowState(Qt::WindowMinimized);
+	if (isMaximized())
+		showNormal();
+	else
+		showMaximized();
 }
 
 void NMainWindow::setOnTop(bool onTop)
@@ -258,4 +298,23 @@ void NMainWindow::setOnTop(bool onTop)
 #endif
 }
 
-/* vim: set ts=4 sw=4: */
+void NMainWindow::waveformSliderToolTip(int x, int y)
+{
+	if (x != -1 && y != -1) {
+		float pos = (float)x / m_waveformSlider->width();
+		NTagReaderInterface *tagReader = dynamic_cast<NTagReaderInterface *>(NPluginLoader::getPlugin(N::TagReader));
+		int duration = tagReader->toString("%D").toInt();
+		int res = duration * pos;
+
+		int hours = res / 60 / 60;
+		QTime time = QTime().addSecs(res);
+		QString timeStr;
+		if (hours > 0)
+			timeStr = time.toString("h:mm:ss");
+		else
+			timeStr = time.toString("m:ss");
+
+		QToolTip::showText(m_waveformSlider->mapToGlobal(QPoint(x, y)), timeStr);
+	}
+}
+

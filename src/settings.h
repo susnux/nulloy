@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -16,10 +16,11 @@
 #ifndef N_SETTINGS_H
 #define N_SETTINGS_H
 
-#include "action.h"
-
 #include <QSettings>
-#include <QVariant>
+
+class QVariant;
+class QString;
+class NAction;
 
 class NSettings : public QSettings
 {
@@ -50,4 +51,3 @@ signals:
 
 #endif
 
-/* vim: set ts=4 sw=4: */

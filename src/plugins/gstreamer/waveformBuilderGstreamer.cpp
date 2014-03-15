@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -15,9 +15,14 @@
 
 #include "waveformBuilderGstreamer.h"
 
+#include "common.h"
+
+#if defined Q_WS_WIN || defined Q_WS_MAC
+#include <QTimer>
+#endif
+
 #include <QFile>
 #include <QDebug>
-#include "core.h"
 
 static QMutex _mutex;
 
@@ -58,7 +63,7 @@ static void _handleBuffer(GstPad *pad, GstBuffer *buffer, gpointer userData)
 	Q_UNUSED(pad);
 
 	int nChannels;
-	GstStructure* structure = gst_caps_get_structure(GST_BUFFER_CAPS(buffer), 0);
+	GstStructure *structure = gst_caps_get_structure(GST_BUFFER_CAPS(buffer), 0);
 	gst_structure_get_int(structure, "channels", &nChannels);
 
 	gint16 *pcmBuffer = reinterpret_cast<gint16 *>(GST_BUFFER_DATA(buffer));
@@ -146,8 +151,8 @@ void NWaveformBuilderGstreamer::start(const QString &file)
 	m_currentFile = file;
 
 	m_playbin = gst_parse_launch("uridecodebin name=w_uridecodebin \
-								! audioconvert ! audio/x-raw-int, width=16, signed=true \
-								! fakesink name=w_sink", NULL);
+	                              ! audioconvert ! audio/x-raw-int, width=16, signed=true \
+	                              ! fakesink name=w_sink", NULL);
 
 #if !defined Q_WS_WIN && !defined Q_WS_MAC
 	GstBus *bus = gst_pipeline_get_bus(GST_PIPELINE(m_playbin));
@@ -224,4 +229,3 @@ void NWaveformBuilderGstreamer::update()
 }
 #endif
 
-/* vim: set ts=4 sw=4: */

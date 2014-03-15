@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -17,10 +17,12 @@
 #define N_DROP_AREA_H
 
 #include <QWidget>
-#include <QDragEnterEvent>
-#include <QDragLeaveEvent>
-#include <QDragMoveEvent>
-#include <QDropEvent>
+
+class QStringList;
+class QDragEnterEvent;
+class QDragMoveEvent;
+class QDragLeaveEvent;
+class QDropEvent;
 
 class NDropArea : public QWidget
 {
@@ -42,4 +44,3 @@ signals:
 
 #endif
 
-/* vim: set ts=4 sw=4: */

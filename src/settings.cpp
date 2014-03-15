@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -15,11 +15,15 @@
 
 #include "settings.h"
 
-#include "core.h"
+#include "common.h"
 
-#include <QDir>
+#include "action.h"
+
 #include <QCoreApplication>
 #include <QDesktopServices>
+#include <QDir>
+#include <QSettings>
+#include <QVariant>
 
 #include <QDebug>
 
@@ -27,10 +31,7 @@
 
 NSettings *NSettings::m_instance = NULL;
 
-NSettings::NSettings(QObject *parent)
-:	QSettings(NCore::rcDir() + "/" +
-				NCore::applicationBinaryName() + ".cfg",
-				QSettings::IniFormat, parent)
+NSettings::NSettings(QObject *parent) : QSettings(NCore::settingsPath(), QSettings::IniFormat, parent)
 {
 	Q_ASSERT_X(!m_instance, "NSettings", "NSettings instance already exists.");
 	m_instance = this;
@@ -50,6 +51,10 @@ NSettings::NSettings(QObject *parent)
 	initValue("PlaylistTrackInfo", "%F (%d)");
 	initValue("WindowTitleTrackInfo","\"{%a - %t|%F}\" - " + QCoreApplication::applicationName() + " %v");
 
+	initValue("Shuffle", FALSE);
+	initValue("Repeat", FALSE);
+
+	initValue("Maximized", FALSE);
 	initValue("MinimizeToTray", FALSE);
 	initValue("TrayIcon", FALSE);
 	initValue("AlwaysOnTop", FALSE);
@@ -60,6 +65,7 @@ NSettings::NSettings(QObject *parent)
 	initValue("DisplayLogDialog", TRUE);
 	initValue("LastDirectory", QDesktopServices::storageLocation(QDesktopServices::MusicLocation));
 	initValue("LoadNext", FALSE);
+	initValue("ShowCoverArt", TRUE);
 	initValue("LoadNextSort", QDir::Name);
 	initValue("Volume", 0.8);
 
@@ -157,4 +163,3 @@ void NSettings::remove(const QString &key)
 	emit valueChanged(key, QString());
 }
 
-/* vim: set ts=4 sw=4: */

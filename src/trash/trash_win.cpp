@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -13,12 +13,11 @@
 **
 *********************************************************************/
 
-#include  "trash.h"
-
+#include <QString>
 #include <windows.h>
 #include <shellapi.h>
 
-int NTrash(const QString &path, QString *error)
+int _trash(const QString &path, QString *error)
 {
 	QString new_path = path;
 	new_path.append("00");
@@ -34,6 +33,4 @@ int NTrash(const QString &path, QString *error)
 	shfo.lpszProgressTitle = NULL;
 	return SHFileOperation(&shfo);
 }
-
-/* vim: set ts=4 sw=4: */
 

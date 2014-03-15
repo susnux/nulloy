@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -15,9 +15,13 @@
 
 #include "dropArea.h"
 
-#include "core.h"
+#include "common.h"
+
 #include <QUrl>
-#include <QFile>
+#include <QDragEnterEvent>
+#include <QDragLeaveEvent>
+#include <QDragMoveEvent>
+#include <QDropEvent>
 
 NDropArea::NDropArea(QWidget *parent, Qt::WindowFlags f) : QWidget(parent, f) {}
 
@@ -59,4 +63,3 @@ QStringList NDropArea::mimeTypes() const
 	return qstrList;
 }
 
-/* vim: set ts=4 sw=4: */

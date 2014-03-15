@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -18,6 +18,8 @@
 
 #include <QVector>
 #include <QPair>
+
+class QDataStream;
 
 class NWaveformPeaks
 {
@@ -55,4 +57,3 @@ public:
 
 #endif
 
-/* vim: set ts=4 sw=4: */

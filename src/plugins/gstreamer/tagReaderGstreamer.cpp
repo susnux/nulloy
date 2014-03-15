@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -15,7 +15,7 @@
 
 #include "tagReaderGstreamer.h"
 
-#include "core.h"
+#include "common.h"
 
 #include <QCoreApplication>
 #include <gst/pbutils/pbutils.h>
@@ -111,34 +111,34 @@ QString NTagReaderGstreamer::parse(const QString &format, bool *success, bool st
 			++i;
 			QChar ch = format.at(i);
 			if (ch == 'a') {
-				if (!(*success = gst_tag_list_get_string(m_taglist, "artist", &gstr)))
+				if (!(*success = gst_tag_list_get_string(m_taglist, GST_TAG_ARTIST, &gstr)))
 					res += "<Unknown artist>";
 				else
 					res += QString::fromUtf8(gstr);
 			} else if (ch == 't') {
-				if (!(*success = gst_tag_list_get_string(m_taglist, "title", &gstr)))
+				if (!(*success = gst_tag_list_get_string(m_taglist, GST_TAG_TITLE, &gstr)))
 					res += "<Unknown title>";
 				else
 					res += gstr;
 			} else if (ch == 'A') {
-				if (!(*success = gst_tag_list_get_string(m_taglist, "album", &gstr)))
+				if (!(*success = gst_tag_list_get_string(m_taglist, GST_TAG_ALBUM, &gstr)))
 					res += "<Unknown album>";
 				else
 					res += QString::fromUtf8(gstr);
 			} else if (ch == 'c') {
-				if (!(*success = gst_tag_list_get_string(m_taglist, "comment", &gstr)))
+				if (!(*success = gst_tag_list_get_string(m_taglist, GST_TAG_COMMENT, &gstr)))
 					res += "<Empty comment>";
 				else
 					res += QString::fromUtf8(gstr);
 			} else if (ch == 'g') {
-				if (!(*success = gst_tag_list_get_string(m_taglist, "genre", &gstr)))
+				if (!(*success = gst_tag_list_get_string(m_taglist, GST_TAG_GENRE, &gstr)))
 					res += "<Unknown genre>";
 				else
 					res += QString::fromUtf8(gstr);
 			} else if (ch == 'y') {
 				GDate *date = NULL;
 				QString str = "0";
-				if (gst_tag_list_get_date(m_taglist, "date", &date)) {
+				if (gst_tag_list_get_date(m_taglist, GST_TAG_DATE, &date)) {
 					GDateYear year = g_date_get_year(date);
 					if (year != G_DATE_BAD_YEAR)
 						str = QString::number(year);
@@ -151,7 +151,7 @@ QString NTagReaderGstreamer::parse(const QString &format, bool *success, bool st
 			} else if (ch == 'n') {
 				unsigned int track = 0;
 				QString str;
-				if ((*success = gst_tag_list_get_uint(m_taglist, "track-number", &track)))
+				if ((*success = gst_tag_list_get_uint(m_taglist, GST_TAG_TRACK_NUMBER, &track)))
 					str = QString::number(track);
 				else
 					str = "<Unknown track number>";
@@ -184,7 +184,7 @@ QString NTagReaderGstreamer::parse(const QString &format, bool *success, bool st
 			} else if (ch == 'B') {
 				unsigned int bitrate = 0;
 				QString str;
-				if ((*success = gst_tag_list_get_uint(m_taglist, "bitrate", &bitrate)))
+				if ((*success = gst_tag_list_get_uint(m_taglist, GST_TAG_BITRATE, &bitrate)))
 					str = QString::number(bitrate / 1000);
 				else
 					str = "<Unknown bitrate>";
@@ -214,7 +214,7 @@ QString NTagReaderGstreamer::parse(const QString &format, bool *success, bool st
 				return res;
 			}
 
-			QString condition = format.mid(i, matchedAt - 1);
+			QString condition = format.mid(i, matchedAt - i);
 
 			if (condition.indexOf('{') != -1) {
 				res += "<condition error: extra '{'>";
@@ -253,5 +253,3 @@ bool NTagReaderGstreamer::isValid()
 	return m_isValid;
 }
 
-
-/* vim: set ts=4 sw=4: */

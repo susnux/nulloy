@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -16,10 +16,10 @@
 #ifndef N_WAVEFORM_SLIDER_H
 #define N_WAVEFORM_SLIDER_H
 
-#include "waveformBuilderInterface.h"
-#include <QMouseEvent>
 #include <QAbstractSlider>
-#include <QTimer>
+#include <QVector>
+
+class NWaveformBuilderInterface;
 
 class NWaveformSlider : public QAbstractSlider
 {
@@ -30,7 +30,6 @@ class NWaveformSlider : public QAbstractSlider
 	Q_PROPERTY(QColor waveBorderColor READ getWaveBorderColor WRITE setWaveBorderColor DESIGNABLE true)
 	Q_PROPERTY(QBrush progressBackground READ getProgressBackground WRITE setProgressBackground DESIGNABLE true)
 	Q_PROPERTY(QBrush pausedBackground READ getPausedBackground WRITE setPausedBackground DESIGNABLE true)
-
 
 private:
 	NWaveformBuilderInterface *m_waveBuilder;
@@ -49,13 +48,12 @@ private:
 	void leaveEvent(QEvent *event);
 	void wheelEvent(QWheelEvent *event);
 	void paintEvent(QPaintEvent *event);
-	void reset();
+	void init();
 
 public:
 	NWaveformSlider(QWidget *parent = 0);
 	~NWaveformSlider();
-
-	void setBuilder(NWaveformBuilderInterface *builder);
+	QSize sizeHint() const;
 
 public slots:
 	void drawFile(const QString &file);
@@ -99,4 +97,3 @@ public:
 
 #endif
 
-/* vim: set ts=4 sw=4: */

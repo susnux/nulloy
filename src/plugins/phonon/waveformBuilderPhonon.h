@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -16,7 +16,7 @@
 #ifndef N_WAVEFORM_BUILDER_PHONON_H
 #define N_WAVEFORM_BUILDER_PHONON_H
 
-#include "pluginElementInterface.h"
+#include "plugin.h"
 #include "waveformBuilderInterface.h"
 #include "abstractWaveformBuilder.h"
 
@@ -25,12 +25,12 @@
 #include <phonon/mediaobject.h>
 #include <QTimer>
 
-class NWaveformBuilderPhonon :	public NWaveformBuilderInterface,
-								public NPluginElementInterface,
-								public NAbstractWaveformBuilder
+class NWaveformBuilderPhonon : public NWaveformBuilderInterface,
+                               public NPlugin,
+                               public NAbstractWaveformBuilder
 {
 	Q_OBJECT
-	Q_INTERFACES(NWaveformBuilderInterface NPluginElementInterface)
+	Q_INTERFACES(NWaveformBuilderInterface NPlugin)
 
 private:
 	Phonon::MediaObject *m_mediaObject;
@@ -45,7 +45,7 @@ public:
 	NWaveformBuilderPhonon(QObject *parent = NULL) : NWaveformBuilderInterface(parent) {}
 	~NWaveformBuilderPhonon();
 	void init();
-	QString interface() { return NWaveformBuilderInterface::interface(); }
+	QString interfaceString() { return NWaveformBuilderInterface::interfaceString(); }
 	PluginType type() { return WaveformBuilder; }
 
 	void start(const QString &file);
@@ -60,4 +60,3 @@ private slots:
 
 #endif
 
-/* vim: set ts=4 sw=4: */

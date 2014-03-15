@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -14,10 +14,13 @@
 *********************************************************************/
 
 #include "label.h"
-#include <QPen>
-#include <QDebug>
 
-NLabel::NLabel(QWidget* parent) : QLabel(parent)
+#include <QPen>
+#include <QPaintEvent>
+#include <QPainter>
+#include <QPoint>
+
+NLabel::NLabel(QWidget *parent) : QLabel(parent)
 {
 	m_shadowOffset = QPoint(0, 0);
 	m_enabled = FALSE;
@@ -110,4 +113,3 @@ void NLabel::paintEvent(QPaintEvent *event)
 	painter.end();
 }
 
-/* vim: set ts=4 sw=4: */

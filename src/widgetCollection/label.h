@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -17,9 +17,11 @@
 #define N_LABEL_H
 
 #include <QLabel>
-#include <QPaintEvent>
-#include <QPainter>
-#include <QPoint>
+
+class QPoint;
+class QColor;
+class QString;
+class QPaintEvent;
 
 class NLabel : public QLabel
 {
@@ -46,7 +48,7 @@ private:
 	void updateElidedText();
 
 public:
-	NLabel(QWidget* parent = 0);
+	NLabel(QWidget *parent = 0);
 
 	Q_INVOKABLE void setText(const QString &text);
 	void setElideMode(Qt::TextElideMode mode);
@@ -71,4 +73,3 @@ public:
 
 #endif
 
-/* vim: set ts=4 sw=4: */

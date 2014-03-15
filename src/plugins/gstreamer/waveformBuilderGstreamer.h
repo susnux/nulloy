@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -16,22 +16,23 @@
 #ifndef N_WAVEFORM_BUILDER_GSTREAMER_H
 #define N_WAVEFORM_BUILDER_GSTREAMER_H
 
-#include "pluginElementInterface.h"
+#include "global.h"
+#include "plugin.h"
 #include "waveformBuilderInterface.h"
 #include "abstractWaveformBuilder.h"
 
 #include <gst/gst.h>
 
 #if defined Q_WS_WIN || defined Q_WS_MAC
-#include <QTimer>
+class QTimer;
 #endif
 
-class NWaveformBuilderGstreamer :	public NWaveformBuilderInterface,
-									public NPluginElementInterface,
-									public NAbstractWaveformBuilder
+class NWaveformBuilderGstreamer : public NWaveformBuilderInterface,
+                                  public NPlugin,
+                                  public NAbstractWaveformBuilder
 {
 	Q_OBJECT
-	Q_INTERFACES(NWaveformBuilderInterface NPluginElementInterface)
+	Q_INTERFACES(NWaveformBuilderInterface NPlugin)
 
 private:
 	GstElement *m_playbin;
@@ -50,8 +51,8 @@ public:
 	~NWaveformBuilderGstreamer();
 
 	void init();
-	QString interface() { return NWaveformBuilderInterface::interface(); }
-	PluginType type() { return WaveformBuilder; }
+	QString interfaceString() { return NWaveformBuilderInterface::interfaceString(); }
+	N::PluginType type() { return N::WaveformBuilder; }
 
 	void start(const QString &file);
 	void stop();
@@ -63,4 +64,3 @@ public:
 
 #endif
 
-/* vim: set ts=4 sw=4: */

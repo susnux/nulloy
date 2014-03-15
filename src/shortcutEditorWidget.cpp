@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -15,6 +15,10 @@
 
 #include "shortcutEditorWidget.h"
 #include "action.h"
+
+#include <QAction>
+#include <QHeaderView>
+#include <QKeyEvent>
 
 NShortcutEditorWidget::NShortcutEditorWidget(QWidget *parent) : QTableWidget(parent)
 {
@@ -115,9 +119,9 @@ QString NShortcutEditorWidget::keyEventToString(QKeyEvent *e)
 	QString seqStr = QKeySequence(e->key()).toString();
 
 	if (seqStr.isEmpty() ||
-		keyInt == Qt::Key_Control ||
-		keyInt == Qt::Key_Alt || keyInt == Qt::Key_AltGr ||
-		keyInt == Qt::Key_Shift)
+	    keyInt == Qt::Key_Control ||
+	    keyInt == Qt::Key_Alt || keyInt == Qt::Key_AltGr ||
+	    keyInt == Qt::Key_Shift)
 	{
 		return "";
 	}
@@ -161,4 +165,3 @@ void NShortcutEditorWidget::keyPressEvent(QKeyEvent *e)
 	currentItem->setText(text + shortcut);
 }
 
-/* vim: set ts=4 sw=4: */

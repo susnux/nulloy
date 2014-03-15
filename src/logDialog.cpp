@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -16,12 +16,15 @@
 #include "logDialog.h"
 
 #include "settings.h"
-#include <QPushButton>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QSpacerItem>
+
+#include <QCheckBox>
 #include <QCoreApplication>
-#include <QDebug>
+#include <QHBoxLayout>
+#include <QMessageBox>
+#include <QPushButton>
+#include <QSpacerItem>
+#include <QTextBrowser>
+#include <QVBoxLayout>
 
 NLogDialog::NLogDialog(QWidget *parent) : QDialog(parent)
 {
@@ -102,4 +105,3 @@ void NLogDialog::closeEvent(QCloseEvent *event)
 	m_oldTitle.clear();
 }
 
-/* vim: set ts=4 sw=4: */

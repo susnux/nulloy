@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -16,16 +16,18 @@
 #ifndef N_PLAYBACK_ENGINE_GSTREAMER_H
 #define N_PLAYBACK_ENGINE_GSTREAMER_H
 
-#include "pluginElementInterface.h"
+#include "global.h"
+#include "plugin.h"
 #include "playbackEngineInterface.h"
-#include <QObject>
-#include <QTimer>
+
 #include <gst/gst.h>
 
-class NPlaybackEngineGStreamer : public NPlaybackEngineInterface, public NPluginElementInterface
+class QTimer;
+
+class NPlaybackEngineGStreamer : public NPlaybackEngineInterface, public NPlugin
 {
 	Q_OBJECT
-	Q_INTERFACES(NPlaybackEngineInterface NPluginElementInterface)
+	Q_INTERFACES(NPlaybackEngineInterface NPlugin)
 
 private:
 	GstElement *m_playbin;
@@ -33,23 +35,27 @@ private:
 	QTimer *m_timer;
 	qreal m_oldVolume;
 	qreal m_oldPosition;
-	State m_oldState;
-	qreal m_savedPosition;
+	N::PlaybackState m_oldState;
+	qreal m_posponedPosition;
 	QString m_currentMedia;
+	gint64 m_durationNsec;
+
+	N::PlaybackState fromGstState(GstState state);
 
 public:
 	NPlaybackEngineGStreamer(QObject *parent = NULL) : NPlaybackEngineInterface(parent) {}
 	~NPlaybackEngineGStreamer();
 	void init();
-	QString interface() { return NPlaybackEngineInterface::interface(); }
-	PluginType type() { return PlaybackEngine; }
+	QString interfaceString() { return NPlaybackEngineInterface::interfaceString(); }
+	N::PluginType type() { return N::PlaybackEngine; }
 
 	Q_INVOKABLE bool hasMedia();
 	Q_INVOKABLE QString currentMedia();
-	Q_INVOKABLE int state() { return m_oldState; }
+	Q_INVOKABLE N::PlaybackState state() { return m_oldState; }
 
 	Q_INVOKABLE qreal volume();
 	Q_INVOKABLE qreal position();
+	Q_INVOKABLE qint64 durationMsec();
 
 public slots:
 	Q_INVOKABLE void setMedia(const QString &file);
@@ -74,10 +80,9 @@ signals:
 	void mediaChanged(const QString &file);
 	void finished();
 	void failed();
-	void stateChanged(int state);
+	void stateChanged(N::PlaybackState state);
 	void tick(qint64 msec);
 };
 
 #endif
 
-/* vim: set ts=4 sw=4: */

@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -16,7 +16,7 @@
 #include "playbackEngineVlc.h"
 #include <QtGlobal>
 
-#include "core.h"
+#include "common.h"
 
 static void _eventHandler(const libvlc_event_t *event, void *userData)
 {
@@ -51,8 +51,8 @@ void NPlaybackEngineVlc::init()
 		argVector << argv[i];
 
 	argVector << "-I" << "dummy"
-			<< "--ignore-config"
-			<< "--no-xlib";
+	          << "--ignore-config"
+	          << "--no-xlib";
 
 	m_vlcInstance = libvlc_new(argVector.size(), &argVector[0]);
 	m_mediaPlayer = libvlc_media_player_new(m_vlcInstance);
@@ -199,4 +199,3 @@ void NPlaybackEngineVlc::_emitFinished()
 	emit finished();
 }
 
-/* vim: set ts=4 sw=4: */

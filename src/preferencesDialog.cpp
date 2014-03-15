@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -18,20 +18,21 @@
 #include "settings.h"
 #include "player.h"
 #include "skinFileSystem.h"
+#include "plugin.h"
 
 #ifndef _N_NO_SKINS_
 #include "skinLoader.h"
 #endif
 
-#ifndef _N_NO_PLUGINS_
-#include "pluginLoader.h"
-#endif
-
+#include <QGroupBox>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QRadioButton>
 #include <QSpacerItem>
+#include <QTextBrowser>
+#include <QVBoxLayout>
 
-#include <QDebug>
+using namespace NPluginLoader;
 
 NPreferencesDialog::~NPreferencesDialog() {}
 
@@ -54,23 +55,19 @@ NPreferencesDialog::NPreferencesDialog(QWidget *parent) : QDialog(parent)
 #ifdef _N_NO_PLUGINS_
 	ui.tabWidget->removeTab(ui.tabWidget->indexOf(ui.pluginsTab));
 #else
-	QStringList identifiers = NPluginLoader::pluginIdentifiers();
 	QVBoxLayout *scrollLayout = new QVBoxLayout;
 	ui.pluginsScrollArea->widget()->setLayout(scrollLayout);
 
-	QGroupBox *playbackBox = generatePluginsGroup(PlaybackEngine, identifiers, NSettings::instance()->value("Playback").toString());
-	if (playbackBox)
-		scrollLayout->addWidget(playbackBox);
+	NFlagIterator<N::PluginType> iter(N::MaxPlugin);
+	while (iter.hasNext()) {
+		iter.next();
+		N::PluginType type = iter.value();
+		QGroupBox *groupBox = createGroupBox(type);
+		if (groupBox)
+			scrollLayout->addWidget(groupBox);
+	}
 
-	QGroupBox *wavefowmBox = generatePluginsGroup(WaveformBuilder, identifiers, NSettings::instance()->value("Waveform").toString());
-	if (wavefowmBox)
-		scrollLayout->addWidget(wavefowmBox);
-
-	QGroupBox *tagReaderBox = generatePluginsGroup(TagReader, identifiers, NSettings::instance()->value("TagReader").toString());
-	if (tagReaderBox)
-		scrollLayout->addWidget(tagReaderBox);
-
-	if (playbackBox || wavefowmBox || tagReaderBox)
+	if (scrollLayout->count() > 0)
 		scrollLayout->addItem(new QSpacerItem(10, 10, QSizePolicy::Expanding, QSizePolicy::Expanding));
 	else
 		ui.tabWidget->removeTab(ui.tabWidget->indexOf(ui.pluginsTab));
@@ -106,92 +103,102 @@ void NPreferencesDialog::setVersionLabel(QString text)
 void NPreferencesDialog::on_versionCheckButton_clicked()
 {
 	ui.versionLabel->setText("Checking...");
-	emit versionOnlineRequested();
+	emit versionRequested();
 }
 
 void NPreferencesDialog::on_titleFormatHelpButton_clicked()
 {
 	QDialog *dialog = new QDialog(this);
 	dialog->setWindowTitle("Title Formats");
+	dialog->setMaximumSize(0, 0);
 
 	QVBoxLayout *layout = new QVBoxLayout;
 	dialog->setLayout(layout);
 
 	QTextBrowser *textBrowser = new QTextBrowser(this);
 	textBrowser->setHtml("<table width=\"100%\">"
-						"<tr><td><b>%a</b></td><td>Artist</td></tr>"
-						"<tr><td><b>%t</b></td><td>Title</td></tr>"
-						"<tr><td><b>%A</b></td><td>Album</td></tr>"
-						"<tr><td><b>%c</b></td><td>Comment</td></tr>"
-						"<tr><td><b>%g</b></td><td>Genre</td></tr>"
-						"<tr><td><b>%y</b></td><td>Year</td></tr>"
-						"<tr><td><b>%n</b></td><td>Track number</td></tr>"
-						"<tr><td><b>%d</b></td><td>Duration</td></tr>"
-						"<tr><td><b>%T</b></td><td>Current time position (Waveform only)</td></tr>"
-						"<tr><td><b>%r</b></td><td>Remaining time (Waveform only)</td></tr>"
-						"<tr><td><b>%B</b></td><td>Bitrate in Kb/s</td></tr>"
-						"<tr><td><b>%s</b></td><td>Sample rate in kHz</td></tr>"
-						"<tr><td><b>%c</b></td><td>Number of channels</td></tr>"
-						"<tr><td><b>%f</b></td><td>File name without extension</td></tr>"
-						"<tr><td><b>%F</b></td><td>File name</td></tr>"
-						"<tr><td><b>%p</b></td><td>File name including absolute path</td></tr>"
-						"<tr><td><b>%v</b></td><td>" + QCoreApplication::applicationName() + " version</td></tr>"
-						"<tr><td><b>%%</b></td><td>\'%\' character</td></tr>"
-						"<tr><td></td><td></td></tr>"
-						"<tr><td>Conditions:</td><td></td></tr>"
-						"<tr><td><b>{</b><i>true</i><b>|</b><i>false</i><b>}</b></td><td>If / Else: evaluate for <i>true</i> or <i>false</i> case. Note: nesting conditions is not supported yet.</td></tr>"
-						"<tr><td></td><td></td></tr>"
-						"<tr><td>Examples:</td><td></td></tr>"
-						"<tr><td><b>{%a - %t|%F}</b></td><td>Print Artist and Title, separated with \"-\". If either of the tags is not available, print file name instead.</td></tr>"
-						"<tr><td></td><td></td></tr>"
-						"<tr><td><b>{%g|}</b></td><td>Print Genre. If not available, print nothing.</td></tr>"
-						"</table><br>");
-
-	dialog->resize(450, 550);
+	                       "<tr><td><b>%a</b></td><td>Artist</td></tr>"
+	                       "<tr><td><b>%t</b></td><td>Title</td></tr>"
+	                       "<tr><td><b>%A</b></td><td>Album</td></tr>"
+	                       "<tr><td><b>%c</b></td><td>Comment</td></tr>"
+	                       "<tr><td><b>%g</b></td><td>Genre</td></tr>"
+	                       "<tr><td><b>%y</b></td><td>Year</td></tr>"
+	                       "<tr><td><b>%n</b></td><td>Track number</td></tr>"
+	                       "<tr><td><b>%d</b></td><td>Duration</td></tr>"
+	                       "<tr><td><b>%T</b></td><td>Current time position (Waveform only)</td></tr>"
+	                       "<tr><td><b>%r</b></td><td>Remaining time (Waveform only)</td></tr>"
+	                       "<tr><td><b>%B</b></td><td>Bitrate in Kb/s</td></tr>"
+	                       "<tr><td><b>%s</b></td><td>Sample rate in kHz</td></tr>"
+	                       "<tr><td><b>%c</b></td><td>Number of channels</td></tr>"
+	                       "<tr><td><b>%f</b></td><td>File name without extension</td></tr>"
+	                       "<tr><td><b>%F</b></td><td>File name</td></tr>"
+	                       "<tr><td><b>%p</b></td><td>File name including absolute path</td></tr>"
+	                       "<tr><td><b>%v</b></td><td>" + QCoreApplication::applicationName() + " version</td></tr>"
+	                       "<tr><td><b>%%</b></td><td>\'%\' character</td></tr>"
+	                       "<tr><td></td><td></td></tr>"
+	                       "<tr><td>Conditions:</td><td></td></tr>"
+	                       "<tr><td><b>{</b><i>true</i><b>|</b><i>false</i><b>}</b></td><td>If / Else: evaluate for <i>true</i> or <i>false</i> case. Note: nesting conditions is not supported yet.</td></tr>"
+	                       "<tr><td></td><td></td></tr>"
+	                       "<tr><td>Examples:</td><td></td></tr>"
+	                       "<tr><td><b>{%a - %t|%F}&nbsp;&nbsp;</b></td><td>Print Artist and Title, separated with \"-\". If either of the tags is not available, print file name instead.</td></tr>"
+	                       "<tr><td></td><td></td></tr>"
+	                       "<tr><td><b>{%g|}</b></td><td>Print Genre. If not available, print nothing.</td></tr>"
+	                     "</table><br>");
+	textBrowser->setStyleSheet("background: transparent");
+	textBrowser->setFrameShape(QFrame::NoFrame);
+	textBrowser->setMinimumWidth(400);
+	textBrowser->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
 	layout->addWidget(textBrowser);
 
 	QPushButton *closeButton = new QPushButton("Close");
 	connect(closeButton, SIGNAL(clicked()), dialog, SLOT(accept()));
-	QHBoxLayout* buttonLayout = new QHBoxLayout();
+	QHBoxLayout *buttonLayout = new QHBoxLayout();
 	buttonLayout->addStretch();
 	buttonLayout->addWidget(closeButton);
 	buttonLayout->addStretch();
 	layout->addLayout(buttonLayout);
 
 	dialog->show();
+
+	// resize according to content
+	QSize textSize = textBrowser->document()->size().toSize();
+	textBrowser->setMinimumHeight(textSize.height());
 }
 
-QGroupBox* NPreferencesDialog::generatePluginsGroup(PluginType type, const QStringList &identifiers, const QString &def)
+QGroupBox* NPreferencesDialog::createGroupBox(N::PluginType type)
 {
-	QString type_str;
-	if (type == PlaybackEngine)
-		type_str = "Playback";
-	else if (type == WaveformBuilder)
-		type_str = "Waveform";
-	else if (type == TagReader)
-		type_str = "TagReader";
+	QList<Descriptor> descriptors = NPluginLoader::descriptors();
 
-	QStringList groupedIds = identifiers.filter(QRegExp("^" + QString::number(type) + "/.*"));
-	if (groupedIds.count() > 1) {
-		QGroupBox *groupBox = new QGroupBox(type_str);
-		QGridLayout *groupLayout = new QGridLayout;
-		groupLayout->setContentsMargins(0, 5, 5, 0);
-		groupLayout->setSpacing(0);
-		groupBox->setLayout(groupLayout);
+	QString typeString = ENUM_NAME(N, PluginType, type);
+	QString settingsContainer = NSettings::instance()->value("Plugins/" + typeString).toString();
 
-		for (int i = 0; i < groupedIds.count(); ++i) {
-			QRadioButton *radioButton = new QRadioButton(groupedIds.at(i).section('/', 1, 2).replace('/', ' '));
-			connect(radioButton, SIGNAL(toggled(bool)), this, SLOT(pluginsChanged()));
-			if (groupedIds.at(i).contains(def))
-				radioButton->setChecked(TRUE);
-			m_pluginButtonsMap[groupedIds.at(i)] = radioButton;
-			groupLayout->addWidget(radioButton, i, 0);
-		}
-		return groupBox;
+	QList<int> indexesFilteredByType;
+	for (int i = 0; i < descriptors.count(); ++i) {
+		if (descriptors.at(i)[TypeRole] == type)
+			indexesFilteredByType << i;
 	}
 
-	return NULL;
+	if (indexesFilteredByType.count() < 2) // need at least two plugins to choose from
+		return NULL;
+
+	QGroupBox *groupBox = new QGroupBox(typeString);
+	QVBoxLayout *layout = new QVBoxLayout;
+	layout->setContentsMargins(0, 5, 5, 0);
+	layout->setSpacing(0);
+	groupBox->setLayout(layout);
+
+	foreach (int i, indexesFilteredByType) {
+		QString containerName = descriptors.at(i)[ContainerNameRole].toString();
+		QRadioButton *button = new QRadioButton(containerName);
+		connect(button, SIGNAL(toggled(bool)), this, SLOT(pluginsChanged()));
+		if (containerName == settingsContainer)
+			button->setChecked(TRUE);
+		m_radioButtons[button] = descriptors.at(i);
+		layout->addWidget(button);
+	}
+
+	return groupBox;
 }
 
 void NPreferencesDialog::pluginsChanged()
@@ -205,22 +212,25 @@ void NPreferencesDialog::on_skinComboBox_activated(int index)
 	ui.skinRestartLabel->setVisible(TRUE);
 }
 
-QString NPreferencesDialog::selectedPluginsGroup(PluginType type)
+QString NPreferencesDialog::selectedContainer(N::PluginType type)
 {
-	QString str;
+	QList<Descriptor> descriptors = NPluginLoader::descriptors();
+	QList<int> indexesFilteredByType;
+	for (int i = 0; i < descriptors.count(); ++i) {
+		if (descriptors.at(i)[TypeRole] == type)
+			indexesFilteredByType << i;
+	}
 
-	QStringList identifiers = m_pluginButtonsMap.keys();
-	QStringList groupedIds = identifiers.filter(QRegExp("^" + QString::number(type) + "/.*"));
-
-	for (int i = 0; i < groupedIds.count(); ++i) {
-		QRadioButton *radioButton = m_pluginButtonsMap[groupedIds.at(i)];
-		if (radioButton->isChecked()) {
-			str = radioButton->text();
+	QString containerName;
+	foreach (int i, indexesFilteredByType) {
+		QRadioButton *button = m_radioButtons.key(descriptors.at(i));
+		if (button && button->isChecked()) {
+			containerName = descriptors.at(i)[ContainerNameRole].toString();
 			break;
 		}
 	}
 
-	return str.replace(' ', '/');
+	return containerName;
 }
 
 void NPreferencesDialog::loadSettings()
@@ -254,6 +264,7 @@ void NPreferencesDialog::loadSettings()
 	int index;
 
 #ifndef _N_NO_SKINS_
+	ui.skinComboBox->clear();
 	foreach (QString str, NSkinLoader::skinIdentifiers()) {
 		QString id = str.section('/', 2);
 		ui.skinComboBox->addItem(id.replace('/', ' '), id);
@@ -291,13 +302,15 @@ void NPreferencesDialog::saveSettings()
 
 #ifndef _N_NO_PLUGINS_
 	// plugins
-	QVariant playbackVariant(selectedPluginsGroup(PlaybackEngine));
-	QVariant waveformVariant(selectedPluginsGroup(WaveformBuilder));
-	QVariant tagReaderVariant(selectedPluginsGroup(TagReader));
-
-	NSettings::instance()->setValue("Playback", playbackVariant);
-	NSettings::instance()->setValue("Waveform", waveformVariant);
-	NSettings::instance()->setValue("TagReader", tagReaderVariant);
+	NFlagIterator<N::PluginType> iter(N::MaxPlugin);
+	while (iter.hasNext()) {
+		iter.next();
+		N::PluginType type = iter.value();
+		QString typeString = ENUM_NAME(N, PluginType, type);
+		QString containerName = selectedContainer(type);
+		if (!containerName.isEmpty())
+			NSettings::instance()->setValue(QString() + "Plugins/" + typeString, containerName);
+	}
 #endif
 
 #ifndef _N_NO_SKINS_
@@ -316,4 +329,3 @@ void NPreferencesDialog::saveSettings()
 		QMessageBox::warning(this, "Systray Error", QObject::tr("System Tray (Notification Area) is not available on your system."));
 }
 
-/* vim: set ts=4 sw=4: */

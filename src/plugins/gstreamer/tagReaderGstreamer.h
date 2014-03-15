@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -16,14 +16,15 @@
 #ifndef N_TAG_READER_GSTREAMER_H
 #define N_TAG_READER_GSTREAMER_H
 
-#include "pluginElementInterface.h"
+#include "global.h"
+#include "plugin.h"
 #include "tagReaderInterface.h"
 #include <gst/gst.h>
 
-class NTagReaderGstreamer : public NTagReaderInterface, public NPluginElementInterface
+class NTagReaderGstreamer : public NTagReaderInterface, public NPlugin
 {
 	Q_OBJECT
-	Q_INTERFACES(NTagReaderInterface NPluginElementInterface)
+	Q_INTERFACES(NTagReaderInterface NPlugin)
 
 private:
 	QString m_path;
@@ -38,8 +39,8 @@ public:
 	~NTagReaderGstreamer();
 
 	void init();
-	QString interface() { return NTagReaderInterface::interface(); }
-	PluginType type() { return TagReader; }
+	QString interfaceString() { return NTagReaderInterface::interfaceString(); }
+	N::PluginType type() { return N::TagReader; }
 
 	void setSource(const QString &file);
 	QString toString(const QString &format);
@@ -48,4 +49,3 @@ public:
 
 #endif
 
-/* vim: set ts=4 sw=4: */

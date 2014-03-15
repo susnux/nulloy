@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -14,6 +14,7 @@
 *********************************************************************/
 
 #include "waveformPeaks.h"
+
 #include <QDebug>
 
 #define MAX_RES 2048
@@ -105,4 +106,3 @@ void NWaveformPeaks::append(qreal value)
 	m_vector[m_index].second = qMin(m_vector[m_index].second, value);
 }
 
-/* vim: set ts=4 sw=4: */

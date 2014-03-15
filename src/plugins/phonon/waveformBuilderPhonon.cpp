@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -22,9 +22,8 @@ void NWaveformBuilderPhonon::handleData(const QMap< Phonon::AudioDataOutput::Cha
 {
 	for (int i = 0; i < m_audioDataOutput->dataSize(); ++i) {
 		qint32 pcmValue = 0;
-		for (int j = 0; j < data.size(); ++j) {
+		for (int j = 0; j < data.size(); ++j)
 			pcmValue += data[(Phonon::AudioDataOutput::Channel)j][i] ;
-		}
 		qreal realValue = -((qreal)pcmValue / data.size()) / (1<<15);
 		m_peaks.append(realValue);
 	}
@@ -46,7 +45,7 @@ void NWaveformBuilderPhonon::init()
 	Phonon::createPath(m_audioDataOutput, m_audioOutput);
 
 	connect(m_audioDataOutput, SIGNAL(dataReady(const QMap< Phonon::AudioDataOutput::Channel, QVector<qint16> > &)),
-			this, SLOT(handleData(const QMap< Phonon::AudioDataOutput::Channel, QVector<qint16> > &)));
+	        this, SLOT(handleData(const QMap< Phonon::AudioDataOutput::Channel, QVector<qint16> > &)));
 
 	m_timer = new QTimer(this);
 	connect(m_timer, SIGNAL(timeout()), this, SLOT(update()));
@@ -120,4 +119,3 @@ qreal NWaveformBuilderPhonon::position()
 	return (qreal)m_mediaObject->currentTime() / m_mediaObject->totalTime();
 }
 
-/* vim: set ts=4 sw=4: */

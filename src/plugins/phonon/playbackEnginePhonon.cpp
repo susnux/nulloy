@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -130,7 +130,7 @@ bool NPlaybackEnginePhonon::hasMedia()
 	Phonon::MediaSource source = m_mediaObject->currentSource();
 
 	if (source.type() == Phonon::MediaSource::Invalid ||
-		source.type() == Phonon::MediaSource::Empty)
+	    source.type() == Phonon::MediaSource::Empty)
 	{
 		return FALSE;
 	} else {
@@ -170,4 +170,3 @@ int NPlaybackEnginePhonon::state()
 	return fromPhononState(m_mediaObject->state());
 }
 
-/* vim: set ts=4 sw=4: */

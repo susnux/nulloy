@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -33,7 +33,11 @@ private:
 	bool m_skinEnabled;
 	QPoint m_dragPoint;
 	QString m_styleSheet;
+	QPoint m_oldPos;
+	QSize m_oldSize;
+	QWidget *m_waveformSlider;
 
+	void changeEvent(QEvent *event);
 	bool eventFilter(QObject *obj, QEvent *event);
 	void showEvent(QShowEvent *event);
 	void hideEvent(QHideEvent *event);
@@ -58,13 +62,14 @@ public:
 
 public slots:
 	void setTitle(QString title);
-	void minimize();
+	void toggleMaximize();
 	void toggleVisibility();
 	void setOnTop(bool onTop);
 
 private slots:
 	void loadSettings();
 	void saveSettings();
+	void waveformSliderToolTip(int x, int y);
 
 signals:
 	void closed();
@@ -74,4 +79,3 @@ signals:
 
 #endif
 
-/* vim: set ts=4 sw=4: */

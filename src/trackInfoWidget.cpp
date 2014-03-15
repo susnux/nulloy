@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -15,10 +15,14 @@
 
 #include "trackInfoWidget.h"
 
+#include "tagReaderInterface.h"
 #include "settings.h"
-#include <QTime>
+
+#include <QGraphicsProxyWidget>
 #include <QGraphicsSceneMouseEvent>
-#include <QDebug>
+#include <QGraphicsView>
+#include <QPropertyAnimation>
+#include <QTime>
 
 NTrackInfoWidget::~NTrackInfoWidget() {}
 
@@ -65,7 +69,6 @@ bool NTrackInfoWidget::eventFilter(QObject *object, QEvent *event)
 {
 	if (event->type() == QEvent::DragEnter || event->type() == QEvent::Leave)
 		QApplication::sendEvent(parent(), event);
-
 
 	if (event->type() == QEvent::GraphicsSceneMouseMove) {
 		QGraphicsSceneMouseEvent *gfx_event = static_cast<QGraphicsSceneMouseEvent*>(event);
@@ -170,4 +173,3 @@ void NTrackInfoWidget::tick(qint64 msec)
 	}
 }
 
-/* vim: set ts=4 sw=4: */

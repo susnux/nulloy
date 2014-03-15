@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -14,8 +14,10 @@
 *********************************************************************/
 
 #include "playbackEngineGstreamer.h"
+
+#include "common.h"
 #include <QtGlobal>
-#include "core.h"
+#include <QTimer>
 
 static void _on_eos(GstBus *bus, GstMessage *msg, gpointer userData)
 {
@@ -43,15 +45,15 @@ static void _on_error(GstBus *bus, GstMessage *msg, gpointer userData)
 	g_error_free(err);
 }
 
-static NPlaybackEngineInterface::State fromGstState(GstState state)
+N::PlaybackState NPlaybackEngineGStreamer::fromGstState(GstState state)
 {
 	switch (state) {
 		case GST_STATE_PAUSED:
-			return NPlaybackEngineInterface::Paused;
+			return N::PlaybackPaused;
 		case GST_STATE_PLAYING:
-			return NPlaybackEngineInterface::Playing;
+			return N::PlaybackPlaying;
 		default:
-			return NPlaybackEngineInterface::Stopped;
+			return N::PlaybackStopped;
 	}
 }
 
@@ -82,9 +84,10 @@ void NPlaybackEngineGStreamer::init()
 
 	m_oldVolume = -1;
 	m_oldPosition = -1;
-	m_savedPosition = -1;
-	m_oldState = Stopped;
+	m_posponedPosition = -1;
+	m_oldState = N::PlaybackStopped;
 	m_currentMedia = "";
+	m_durationNsec = 0;
 
 	m_timer = new QTimer(this);
 	connect(m_timer, SIGNAL(timeout()), this, SLOT(checkStatus()));
@@ -150,43 +153,36 @@ void NPlaybackEngineGStreamer::setPosition(qreal pos)
 	if (!hasMedia() || pos < 0)
 		return;
 
-	GstFormat format = GST_FORMAT_TIME;
-	gint64 len;
-	if (gst_element_query_duration(m_playbin, &format, &len)) {
+	if (m_durationNsec > 0) {
 		gst_element_seek(m_playbin, 1.0,
-						GST_FORMAT_TIME,
-						GstSeekFlags(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT),
-						GST_SEEK_TYPE_SET, pos * len,
-						GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
+		                 GST_FORMAT_TIME,
+		                 GstSeekFlags(GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT),
+		                 GST_SEEK_TYPE_SET, pos * m_durationNsec,
+		                 GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
 	} else {
-		m_savedPosition = pos;
+		m_posponedPosition = pos;
 	}
 }
 
 qreal NPlaybackEngineGStreamer::position()
 {
-	if (!hasMedia())
+	if (!hasMedia() || m_durationNsec <= 0)
 		return -1;
 
 	GstFormat format = GST_FORMAT_TIME;
-	gint64 len, pos;
-
-	gboolean res;
-
-	res = gst_element_query_duration(m_playbin, &format, &len);
-	if (!res)
-		return 0;
-
-	res = gst_element_query_position(m_playbin, &format, &pos);
-	if (!res)
-		return 0;
-
-	if (format != GST_FORMAT_TIME)
+	gint64 pos;
+	gboolean res = gst_element_query_position(m_playbin, &format, &pos);
+	if (!res || format != GST_FORMAT_TIME)
 		return 0;
 
 	emit tick(pos / 1000000);
 
-	return (qreal)pos / len;
+	return (qreal)pos / m_durationNsec;
+}
+
+qint64 NPlaybackEngineGStreamer::durationMsec()
+{
+	return m_durationNsec / 1000000;
 }
 
 void NPlaybackEngineGStreamer::play()
@@ -230,14 +226,27 @@ QString NPlaybackEngineGStreamer::currentMedia()
 
 void NPlaybackEngineGStreamer::checkStatus()
 {
-	if (m_savedPosition >= 0) {
+	GstState gstState;
+	gst_element_get_state(m_playbin, &gstState, NULL, 0);
+	N::PlaybackState state = fromGstState(gstState);
+	if (m_oldState != state) {
+		emit stateChanged(state);
+		m_oldState = state;
+	}
+
+	if (state == N::PlaybackPlaying || state == N::PlaybackPaused) {
+		// duration may change for some reason
+		// TODO use DURATION_CHANGED in gstreamer1.0
 		GstFormat format = GST_FORMAT_TIME;
-		gint64 len;
-		if (gst_element_query_duration(m_playbin, &format, &len)) {
-			setPosition(m_savedPosition);
-			m_savedPosition = -1;
-			emit positionChanged(m_savedPosition);
-		}
+		gboolean res = gst_element_query_duration(m_playbin, &format, &m_durationNsec);
+		if (!res || format != GST_FORMAT_TIME)
+			m_durationNsec = 0;
+	}
+
+	if (m_posponedPosition >= 0 && m_durationNsec > 0) {
+		setPosition(m_posponedPosition);
+		m_posponedPosition = -1;
+		emit positionChanged(m_posponedPosition);
 	} else {
 		qreal pos = position();
 		if (m_oldPosition != pos) {
@@ -270,28 +279,22 @@ void NPlaybackEngineGStreamer::checkStatus()
 		m_oldVolume = vol;
 		emit volumeChanged(vol);
 	}
-
-	GstState gstState;
-	gst_element_get_state(m_playbin, &gstState, NULL, 0);
-	State state = fromGstState(gstState);
-	if (m_oldState != state) {
-		emit stateChanged(state);
-		m_oldState = state;
-	}
 }
 
 void NPlaybackEngineGStreamer::_emitFinished()
 {
 	stop();
 	emit finished();
-	emit stateChanged(Stopped);
+	emit stateChanged(N::PlaybackStopped);
+	m_oldState = N::PlaybackStopped;
 }
 
 void NPlaybackEngineGStreamer::_emitFailed()
 {
 	stop();
 	emit failed();
-	emit stateChanged(Stopped);
+	emit stateChanged(N::PlaybackStopped);
+	m_oldState = N::PlaybackStopped;
 }
 
 void NPlaybackEngineGStreamer::_emitError(QString error)
@@ -299,4 +302,3 @@ void NPlaybackEngineGStreamer::_emitError(QString error)
 	emit message(QMessageBox::Critical, QFileInfo(m_currentMedia).absoluteFilePath(), error);
 }
 
-/* vim: set ts=4 sw=4: */

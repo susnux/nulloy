@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -16,22 +16,25 @@
 #ifndef N_PLUGIN_LOADER_H
 #define N_PLUGIN_LOADER_H
 
-#include "waveformBuilderInterface.h"
-#include "playbackEngineInterface.h"
-#include "tagReaderInterface.h"
-
-#include <QStringList>
+#include "plugin.h"
+#include <QMap>
+#include <QVariant>
 
 namespace NPluginLoader
 {
-	NPlaybackEngineInterface* playbackPlugin();
-	NWaveformBuilderInterface* waveformPlugin();
-	NTagReaderInterface* tagReaderPlugin();
+	enum DescriptorRole {
+		TypeRole = 0,
+		ContainerNameRole,
+		PluginObjectRole,
+		LoaderObjectRole
+	};
+	typedef QMap<DescriptorRole, QVariant> Descriptor;
+	QList<Descriptor> descriptors();
 
-	QStringList pluginIdentifiers();
+	NPlugin* getPlugin(N::PluginType type);
+
 	void deinit();
 }
 
 #endif
 
-/* vim: set ts=4 sw=4: */

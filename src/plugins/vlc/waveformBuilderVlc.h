@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -16,19 +16,19 @@
 #ifndef N_WAVEFORM_BUILDER_VLC_H
 #define N_WAVEFORM_BUILDER_VLC_H
 
-#include "pluginElementInterface.h"
+#include "plugin.h"
 #include "waveformBuilderInterface.h"
 #include "abstractWaveformBuilder.h"
 
 #include <vlc/vlc.h>
 #include <QTimer>
 
-class NWaveformBuilderVlc :	public NWaveformBuilderInterface,
-							public NPluginElementInterface,
-							public NAbstractWaveformBuilder
+class NWaveformBuilderVlc : public NWaveformBuilderInterface,
+                            public NPlugin,
+                            public NAbstractWaveformBuilder
 {
 	Q_OBJECT
-	Q_INTERFACES(NWaveformBuilderInterface NPluginElementInterface)
+	Q_INTERFACES(NWaveformBuilderInterface NPlugin)
 
 private:
 	libvlc_instance_t *m_vlcInstance;
@@ -43,7 +43,7 @@ public:
 	NWaveformBuilderVlc(QObject *parent = NULL) : NWaveformBuilderInterface(parent) {}
 	~NWaveformBuilderVlc();
 	void init();
-	QString interface() { return NWaveformBuilderInterface::interface(); }
+	QString interfaceString() { return NWaveformBuilderInterface::interfaceString(); }
 	PluginType type() { return WaveformBuilder; }
 
 	void start(const QString &file);
@@ -60,4 +60,3 @@ private slots:
 
 #endif
 
-/* vim: set ts=4 sw=4: */

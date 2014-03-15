@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>538</width>
-    <height>444</height>
+    <width>600</width>
+    <height>505</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,6 +19,14 @@
 }
 #borderWidget {
 	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #767676, stop: 1 #515151);
+}
+
+#coverWidget {
+	background: transparent;
+	border: 1px solid #767676;
+}
+#coverWidget:hover {
+	border: 1px solid #FBFFDD;
 }
 
 #backgroundWidget {
@@ -113,38 +121,56 @@ QScrollBar::sub-page {
 	border-image: url(icon.png);
 }
 
-#segmentWrapper {
+#segmentWrapper,
+#repeatShuffleWrapper {
 	border-radius: 2px;
 	border:  1px solid #DEDEDE;
 }
-#prevButton, #playButton, #stopButton, #nextButton {
+#prevButton, #playButton, #stopButton, #nextButton,
+#repeatCheckBox, #shuffleCheckBox {
 	border-radius: 2px;
 	border: 1px solid #4A4A4A;
 	background: qlineargradient(spread:pad, x1:0, y1:0.1, x2:0, y2:0.9, stop:0 #FAFAFA, stop:1 #9b9b9b);
 	padding-top: 1px;
 }
-#prevButton, #playButton, #stopButton {
+#prevButton, #playButton, #stopButton,
+#repeatCheckBox {
 	border-right: none;
 }
 #playButton, #stopButton {
 	border-radius: 0;
 }
-#prevButton {
+#prevButton, #repeatCheckBox {
 	border-top-right-radius: 0;
 	border-bottom-right-radius: 0;
 }
-#nextButton {
+#nextButton, #shuffleCheckBox {
 	border-top-left-radius: 0;
 	border-bottom-left-radius: 0;
 }
 #playButton:hover, #stopButton:hover,
-#nextButton:hover, #prevButton:hover  {
+#nextButton:hover, #prevButton:hover,
+#repeatCheckBox:hover, #shuffleCheckBox:hover {
 	background: qlineargradient(spread:pad, x1:0, y1:0.1, x2:0, y2:0.9, stop:0 #FFFFFE, stop:1 #FBFFDD);
 }
 #playButton:pressed, #stopButton:pressed,
-#nextButton:pressed, #prevButton:pressed {
+#nextButton:pressed, #prevButton:pressed,
+#repeatCheckBox:pressed, #shuffleCheckBox:pressed,
+#repeatCheckBox:checked, #shuffleCheckBox:checked {
 	background: qlineargradient(spread:pad, x1:0, y1:0.1, x2:0, y2:0.9, stop:0 #666666, stop:1 #9E9E9E);
 	padding-top: 2px;
+}
+#repeatCheckBox:checked, #shuffleCheckBox:checked {
+	padding-top: 0;
+}
+#repeatCheckBox:checked:pressed, #shuffleCheckBox:checked:pressed {
+	padding-top: 2px;
+}
+#repeatCheckBox {
+	qproperty-icon: url(repeat.png);
+}
+#shuffleCheckBox {
+	qproperty-icon: url(shuffle.png);
 }
 #prevButton {
 	qproperty-icon: url(prev.png);
@@ -665,12 +691,6 @@ QScrollBar::sub-page {
             <bool>false</bool>
            </property>
            <widget class="QWidget" name="backgroundWidget" native="true">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
             <layout class="QVBoxLayout" name="verticalLayout_3">
              <property name="margin">
               <number>0</number>
@@ -697,7 +717,7 @@ QScrollBar::sub-page {
                  <number>3</number>
                 </property>
                 <item>
-                 <widget class="QWidget" name="widget" native="true">
+                 <widget class="QWidget" name="titleWidget" native="true">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
                     <horstretch>0</horstretch>
@@ -766,9 +786,9 @@ QScrollBar::sub-page {
                      </property>
                      <property name="styleSheet">
                       <string notr="true">#titleLabel {
-qproperty-shadowEnabled: true;
-qproperty-shadowOffsetY: 1;
-qproperty-shadowColor: white;
+	qproperty-shadowEnabled: true;
+	qproperty-shadowOffsetY: 1;
+	qproperty-shadowColor: white;
 }
                   </string>
                      </property>
@@ -920,27 +940,33 @@ qproperty-shadowColor: white;
                  </spacer>
                 </item>
                 <item>
-                 <widget class="NWaveformSlider" name="waveformSlider" native="true">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
+                 <layout class="QHBoxLayout" name="coverWaveformLayout">
+                  <property name="spacing">
+                   <number>4</number>
                   </property>
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>60</height>
-                   </size>
-                  </property>
-                  <property name="maximumSize">
-                   <size>
-                    <width>16777215</width>
-                    <height>16777215</height>
-                   </size>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">#waveformSlider {
+                  <item>
+                   <widget class="NCoverWidget" name="coverWidget">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>60</width>
+                      <height>60</height>
+                     </size>
+                    </property>
+                    <property name="text">
+                     <string/>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="NWaveformSlider" name="waveformSlider" native="true">
+                    <property name="styleSheet">
+                     <string notr="true">#waveformSlider {
 	background: black;
 	qproperty-radius: 5;
 	qproperty-background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #28323D, stop:1 #3f4f61);
@@ -950,8 +976,10 @@ qproperty-shadowColor: white;
 	qproperty-pausedBackground: #ce8419;
 }
                   </string>
-                  </property>
-                 </widget>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
                 </item>
                 <item>
                  <spacer name="verticalSpacer">
@@ -997,7 +1025,7 @@ qproperty-shadowColor: white;
                      </property>
                      <property name="maximumSize">
                       <size>
-                       <width>200</width>
+                       <width>210</width>
                        <height>25</height>
                       </size>
                      </property>
@@ -1078,6 +1106,111 @@ qproperty-shadowColor: white;
                         </property>
                         <property name="toolTip">
                          <string>Next</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="horizontalSpacer_2">
+                     <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Preferred</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>20</width>
+                       <height>13</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="QWidget" name="repeatShuffleWrapper" native="true">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
+                     <property name="minimumSize">
+                      <size>
+                       <width>60</width>
+                       <height>21</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>60</width>
+                       <height>21</height>
+                      </size>
+                     </property>
+                     <layout class="QHBoxLayout" name="segmentWrapper_2">
+                      <property name="spacing">
+                       <number>0</number>
+                      </property>
+                      <property name="leftMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="topMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="rightMargin">
+                       <number>0</number>
+                      </property>
+                      <property name="bottomMargin">
+                       <number>1</number>
+                      </property>
+                      <item>
+                       <widget class="QToolButton" name="repeatCheckBox">
+                        <property name="sizePolicy">
+                         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                         </sizepolicy>
+                        </property>
+                        <property name="toolTip">
+                         <string>Repeat</string>
+                        </property>
+                        <property name="text">
+                         <string/>
+                        </property>
+                        <property name="iconSize">
+                         <size>
+                          <width>18</width>
+                          <height>18</height>
+                         </size>
+                        </property>
+                        <property name="checkable">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QToolButton" name="shuffleCheckBox">
+                        <property name="sizePolicy">
+                         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                         </sizepolicy>
+                        </property>
+                        <property name="toolTip">
+                         <string>Shuffle</string>
+                        </property>
+                        <property name="text">
+                         <string/>
+                        </property>
+                        <property name="iconSize">
+                         <size>
+                          <width>18</width>
+                          <height>18</height>
+                         </size>
+                        </property>
+                        <property name="checkable">
+                         <bool>true</bool>
                         </property>
                        </widget>
                       </item>
@@ -1253,7 +1386,7 @@ qproperty-shadowColor: white;
            </widget>
            <widget class="QWidget" name="widget_4" native="true">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
               <horstretch>0</horstretch>
               <verstretch>1</verstretch>
              </sizepolicy>
@@ -1289,12 +1422,6 @@ qproperty-shadowColor: white;
              </item>
              <item>
               <widget class="NPlaylistWidget" name="playlistWidget">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
                <property name="focusPolicy">
                 <enum>Qt::ClickFocus</enum>
                </property>
@@ -1358,6 +1485,11 @@ qproperty-shadowColor: white;
    <class>NPlaylistWidget</class>
    <extends>QListWidget</extends>
    <header>playlistWidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>NCoverWidget</class>
+   <extends>QLabel</extends>
+   <header>coverWidget.h</header>
   </customwidget>
   <customwidget>
    <class>NLabel</class>

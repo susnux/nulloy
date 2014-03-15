@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -14,14 +14,23 @@
 *********************************************************************/
 
 #include "widgetCollection.h"
+
+#include "dropArea.h"
+#include "label.h"
+#include "playlistWidget.h"
+#include "slider.h"
+#include "waveformSlider.h"
+#include "coverWidget.h"
+
 #include <QtPlugin>
+#include <QSizeGrip>
 
 static inline QString _domXml(const QString &className, const QString &name)
 {
 	return QString("<ui language=\"c++\">\n"
-					" <widget class=\"%1\" name=\"%2\">\n"
-					" </widget>\n"
-					"</ui>").arg(className).arg(name);
+	               " <widget class=\"%1\" name=\"%2\">\n"
+	               " </widget>\n"
+	               "</ui>").arg(className).arg(name);
 }
 
 NWidgetPlugin::NWidgetPlugin(const QString &className)
@@ -56,8 +65,43 @@ NWidgetCollection::NWidgetCollection(QObject *parent) : QObject(parent)
 	m_plugins.push_back(new NSliderPlugin(this));
 	m_plugins.push_back(new NPlaylistWidgetPlugin(this));
 	m_plugins.push_back(new NLabelPlugin(this));
+	m_plugins.push_back(new NCoverWidgetPlugin(this));
+}
+
+QWidget* NLabelPlugin::createWidget(QWidget *parent)
+{
+	return new NLabel(parent);
+}
+
+QWidget* NDropAreaPlugin::createWidget(QWidget *parent)
+{
+	return new NDropArea(parent);
+}
+
+QWidget* NPlaylistWidgetPlugin::createWidget(QWidget *parent)
+{
+	return new NPlaylistWidget(parent);
+}
+
+QWidget* NSliderPlugin::createWidget(QWidget *parent)
+{
+	return new NSlider(parent);
+}
+
+QWidget* NWaveformSliderPlugin::createWidget(QWidget *parent)
+{
+	return new NWaveformSlider(parent);
+}
+
+QWidget* NCoverWidgetPlugin::createWidget(QWidget *parent)
+{
+	return new NCoverWidget(parent);
+}
+
+QWidget* QSizeGripPlugin::createWidget(QWidget *parent)
+{
+	return new QSizeGrip(parent);
 }
 
 Q_EXPORT_PLUGIN2(widget_collection, NWidgetCollection)
 
-/* vim: set ts=4 sw=4: */

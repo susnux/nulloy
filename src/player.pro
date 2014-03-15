@@ -8,18 +8,22 @@ win32:TARGET = Nulloy
 DESTDIR = ..
 
 DEPENDPATH += . ux/
-INCLUDEPATH += . ux/
+INCLUDEPATH += . ux/ interfaces/
 
 HEADERS += *.h ux/*.h
 SOURCES += *.cpp ux/*.cpp
 
 FORMS += *.ui
 
+isEmpty(TMP_DIR){
+	TMP_DIR = $$PWD/.tmp
+}
 OBJECTS_DIR	= $$TMP_DIR
-MOC_DIR		= $$TMP_DIR
-RCC_DIR		= $$TMP_DIR
-UI_DIR		= $$TMP_DIR
+MOC_DIR     = $$TMP_DIR
+RCC_DIR     = $$TMP_DIR
+UI_DIR      = $$TMP_DIR
 
+# zlib
 unix {
 	CONFIG += link_pkgconfig
 	# zlib
@@ -27,74 +31,64 @@ unix {
 	# X11
 	!mac:PKGCONFIG += x11
 }
-
-# trash
-HEADERS += trash/trash.h
-INCLUDEPATH += trash/
 win32 {
-	SOURCES += trash/trash_win.cpp
-	LIBS += -ladvapi32 -lshell32
+	LIBS += -L$(ZLIB_DIR)/lib -lzdll
 }
-mac {
-	OBJECTIVE_SOURCES += trash/trash_mac.mm
-	LIBS += -framework Foundation -framework Cocoa
-}
-unix:!mac {
-	SOURCES += trash/trash_x11.cpp
-}
+
 
 # qmake -config no-skins
 !no-skins {
 	CONFIG += uitools
 	INCLUDEPATH += widgetCollection
 	LIBS += -LwidgetCollection -lwidget_collection
-	unix:PRE_TARGETDEPS += widgetCollection/libwidget_collection.a
-	win32:PRE_TARGETDEPS += widgetCollection/widget_collection.lib
+	PRE_TARGETDEPS += widgetCollection/libwidget_collection.a
 	RESOURCES += native-skin-embedded.qrc
 
-	unix {
-		SRC_DIR=$$PWD
-		silver_skin.target = ../skins/silver.nzs
-		silver_skin.depends = skins/silver/*
-		silver_skin.commands =	[ -d $$SRC_DIR/../skins ] || mkdir $$SRC_DIR/../skins && \
-								cd $$TMP_DIR && cp -r $$SRC_DIR/skins/silver . && \
-								cd silver && \
-								rm design.svg && \
-								zip $$SRC_DIR/../skins/silver.nzs *
-		QMAKE_EXTRA_TARGETS += silver_skin
-		PRE_TARGETDEPS += $$silver_skin.target
-		#dirty hack for install
-		system($$silver_skin.commands)
 
-		metro_skin.target = ../skins/metro.nzs
-		metro_skin.depends = skins/metro/*
-		metro_skin.commands =	[ -d $$SRC_DIR/../skins ] || mkdir $$SRC_DIR/../skins && \
-		cd $$TMP_DIR && cp -r $$SRC_DIR/skins/metro . && \
-		cd metro && \
-		rm design.svg && \
-		zip $$SRC_DIR/../skins/metro.nzs *
-		QMAKE_EXTRA_TARGETS += metro_skin
-		PRE_TARGETDEPS += $$metro_skin.target
-		#dirty hack for install
-		system($$metro_skin.commands)
+	SRC_DIR = $$PWD
+	SKIN_DEST_DIR = $$SRC_DIR/../skins
+	!exists($$SKIN_DEST_DIR) {
+		win32:SKIN_DEST_DIR ~= s,/,\\,g
+		system(mkdir $$SKIN_DEST_DIR)
 	}
+
+	silver_skin.target = $$SKIN_DEST_DIR/silver.nzs
+	metro_skin.target = $$SKIN_DEST_DIR/metro.nzs
+
+	unix {
+		ZIP_ADD_CMD=zip -j
+		ZIP_DEL_CMD=zip -d
+	}
+	win32 {
+		ZIP_ADD_CMD=7z a -tzip
+		ZIP_DEL_CMD=7z d -tzip
+	}
+	metro_skin.commands =  $$ZIP_ADD_CMD $$metro_skin.target $$SRC_DIR/skins/metro/* && \
+	                       $$ZIP_DEL_CMD $$metro_skin.target design.svg
+	silver_skin.commands = $$ZIP_ADD_CMD $$silver_skin.target $$SRC_DIR/skins/silver/* && \
+	                       $$ZIP_DEL_CMD $$silver_skin.target design.svg
+
+	QMAKE_EXTRA_TARGETS += silver_skin metro_skin
+	PRE_TARGETDEPS += $$silver_skin.target $$metro_skin.target
+	system($$silver_skin.commands)
+	system($$metro_skin.commands)
 } else {
 	DEFINES += _N_NO_SKINS_
 
 	HEADERS -= skinFileSystem.h   skinLoader.h
 	SOURCES -= skinFileSystem.cpp skinLoader.cpp
-	HEADERS +=	widgetCollection/dropArea.h \
-				widgetCollection/label.h \
-				widgetCollection/playlistWidget.h \
-				widgetCollection/slider.h \
-				widgetCollection/waveformSlider.h \
-				widgetCollection/playlistItem.h
-	SOURCES +=	widgetCollection/dropArea.cpp \
-				widgetCollection/label.cpp \
-				widgetCollection/playlistWidget.cpp \
-				widgetCollection/slider.cpp \
-				widgetCollection/waveformSlider.cpp \
-				widgetCollection/playlistItem.cpp
+	HEADERS += widgetCollection/dropArea.h \
+	           widgetCollection/label.h \
+	           widgetCollection/playlistWidget.h \
+	           widgetCollection/slider.h \
+	           widgetCollection/waveformSlider.h \
+	           widgetCollection/playlistWidgetItem.h
+	SOURCES += widgetCollection/dropArea.cpp \
+	           widgetCollection/label.cpp \
+	           widgetCollection/playlistWidget.cpp \
+	           widgetCollection/slider.cpp \
+	           widgetCollection/waveformSlider.cpp \
+	           widgetCollection/playlistWidgetItem.cpp
 
 	DEPENDPATH += widgetCollection/
 	INCLUDEPATH += widgetCollection/
@@ -131,6 +125,7 @@ build_pass:CONFIG(static, static|shared) {
 include(../3rdParty/qxt-0.6.1~reduced/src/gui/qxtglobalshortcut.pri)
 include(../3rdParty/qtsingleapplication-2.6.1/src/qtsingleapplication.pri)
 include(../3rdParty/qtiocompressor-2.3.1/src/qtiocompressor.pri)
+include(trash/trash.pri)
 
 # qmake -config no-plugins
 !no-plugins {
@@ -194,5 +189,3 @@ mac {
 		INSTALLS += plugins
 	}
 }
-
-# vim: set ts=4 sw=4: #

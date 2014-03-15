@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -14,12 +14,19 @@
 *********************************************************************/
 
 #include "waveformSlider.h"
+#include "waveformBuilderInterface.h"
 
+#include <QMouseEvent>
 #include <QPainter>
 #include <QFile>
-#include <QDebug>
 #include <QStylePainter>
 #include <QStyleOptionFocusRect>
+
+#ifndef _N_NO_PLUGINS_
+#include "pluginLoader.h"
+#else
+#include "waveformBuilderGstreamer.h"
+#endif
 
 NWaveformSlider::NWaveformSlider(QWidget *parent) : QAbstractSlider(parent)
 {
@@ -32,24 +39,22 @@ NWaveformSlider::NWaveformSlider(QWidget *parent) : QAbstractSlider(parent)
 
 	setMouseTracking(TRUE);
 
-	m_waveBuilder = NULL;
-	m_bufImage.resize(7);
+#ifndef _N_NO_PLUGINS_
+	m_waveBuilder = dynamic_cast<NWaveformBuilderInterface *>(NPluginLoader::getPlugin(N::WaveformBuilder));
+#else
+	NWaveformBuilderInterface *builder = dynamic_cast<NWaveformBuilderInterface *>(new NWaveformBuilderGstreamer());
+	dynamic_cast<NPlugin *>(builder)->init();
+	m_waveBuilder = builder;
+#endif
 
-	setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-	setMinimumHeight(50);
+	m_bufImage.resize(7);
 
 	m_timer = new QTimer(this);
 	connect(m_timer, SIGNAL(timeout()), this, SLOT(checkForUpdate()));
 	m_timer->start(50);
 
 	m_oldSize = QSize(0, 0);
-	reset();
-}
-
-void NWaveformSlider::setBuilder(NWaveformBuilderInterface *builder)
-{
-	m_waveBuilder = builder;
-	m_waveBuilder->setParent(this);
+	init();
 }
 
 void NWaveformSlider::setPausedState(bool state)
@@ -58,13 +63,22 @@ void NWaveformSlider::setPausedState(bool state)
 	update();
 }
 
-void NWaveformSlider::reset()
+void NWaveformSlider::init()
 {
 	m_oldValue = -1;
 	m_oldIndex = -1;
 	m_oldBuildPos = -1;
 	m_pausedState = FALSE;
 	setEnabled(FALSE);
+
+	setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+	setMinimumHeight(50);
+	setMinimumWidth(150);
+}
+
+QSize NWaveformSlider::sizeHint() const
+{
+	return QSize(200, 80);
 }
 
 NWaveformSlider::~NWaveformSlider() {}
@@ -83,9 +97,9 @@ void NWaveformSlider::checkForUpdate()
 	m_waveBuilder->positionAndIndex(pos, index);
 
 	if (!(pos < 0 || index < 0) &&
-		!(m_oldBuildPos == pos &&
-		m_oldIndex == index &&
-		m_waveImage.size() == size()))
+	    !(m_oldBuildPos == pos &&
+	    m_oldIndex == index &&
+	    m_waveImage.size() == size()))
 	{
 		m_oldBuildPos = pos;
 		m_oldIndex = index;
@@ -133,6 +147,7 @@ void NWaveformSlider::mouseMoveEvent(QMouseEvent *event)
 
 void NWaveformSlider::leaveEvent(QEvent *event)
 {
+	Q_UNUSED(event);
 	emit mouseMoved(-1, -1);
 }
 
@@ -257,7 +272,7 @@ void NWaveformSlider::setValue(int value)
 
 void NWaveformSlider::drawFile(const QString &file)
 {
-	reset();
+	init();
 
 	if (!QFile(file).exists())
 		return;
@@ -328,4 +343,3 @@ void NWaveformSlider::setPausedBackground(QBrush brush)
 	m_pausedBackground = brush;
 }
 
-/* vim: set ts=4 sw=4: */

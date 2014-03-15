@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -16,16 +16,16 @@
 #ifndef N_PLAYBACK_ENGINE_VLC_H
 #define N_PLAYBACK_ENGINE_VLC_H
 
-#include "pluginElementInterface.h"
+#include "plugin.h"
 #include "playbackEngineInterface.h"
 #include <QTimer>
 #include <vlc/vlc.h>
 #include <vlc_aout.h>
 
-class NPlaybackEngineVlc : public NPlaybackEngineInterface, public NPluginElementInterface
+class NPlaybackEngineVlc : public NPlaybackEngineInterface, public NPlugin
 {
 	Q_OBJECT
-	Q_INTERFACES(NPlaybackEngineInterface NPluginElementInterface)
+	Q_INTERFACES(NPlaybackEngineInterface NPlugin)
 
 private:
 	libvlc_instance_t *m_vlcInstance;
@@ -42,7 +42,7 @@ public:
 	NPlaybackEngineVlc(QObject *parent = NULL) : NPlaybackEngineInterface(parent) {}
 	~NPlaybackEngineVlc();
 	void init();
-	QString interface() { return NPlaybackEngineInterface::interface(); }
+	QString interfaceString() { return NPlaybackEngineInterface::interfaceString(); }
 	PluginType type() { return PlaybackEngine; }
 
 	Q_INVOKABLE bool hasMedia();
@@ -78,4 +78,3 @@ signals:
 
 #endif
 
-/* vim: set ts=4 sw=4: */

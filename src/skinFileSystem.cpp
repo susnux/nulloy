@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2013 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -14,7 +14,10 @@
 *********************************************************************/
 
 #include "skinFileSystem.h"
-#include <QtDebug>
+
+#include <QAbstractFileEngine>
+#include <QByteArray>
+#include <QString>
 
 QHash<QString, QByteArray> NSkinFileSystem::m_fileHash;
 QString NSkinFileSystem::m_prefix;
@@ -63,8 +66,8 @@ bool NSkinFileSystem::init()
 
 NSkinFileEngine::NSkinFileEngine(const QByteArray &ba, const QString &fileName)
 {
-    m_bytes = ba;
-    m_fileName = fileName;
+	m_bytes = ba;
+	m_fileName = fileName;
 }
 
 QAbstractFileEngine* NSkinFileSystem::create(const QString &fileName) const
@@ -133,4 +136,3 @@ QAbstractFileEngine::FileFlags NSkinFileEngine::fileFlags(QAbstractFileEngine::F
 	return flags;
 }
 
-/* vim: set ts=4 sw=4: */
