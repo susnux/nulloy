@@ -50,8 +50,7 @@ private slots:
 	void saveSettings();
 	void on_versionCheckButton_clicked();
 	void on_titleFormatHelpButton_clicked();
-	void pluginsChanged();
-	void on_skinComboBox_activated(int index);
+	void on_languageComboBox_activated(int index);
 
 signals:
 	void settingsChanged();

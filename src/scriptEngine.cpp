@@ -17,7 +17,8 @@
 
 #include "global.h"
 #include "scriptQtPrototypes.h"
-
+#include "skinFileSystem.h"
+#include "player.h"
 #include "mainWindow.h"
 #include "playbackEngineInterface.h"
 #include "settings.h"
@@ -63,12 +64,67 @@ void enumFromScriptValue(const QScriptValue &value, T &en)
 	en = (T)value.toInt32();
 }
 
-NScriptEngine::NScriptEngine(QObject *parent) : QScriptEngine(parent)
+QScriptValue readFile(QScriptContext *context, QScriptEngine *engine)
 {
-	QScriptValue Qt = newQMetaObject(QtMetaObject::get());
-	globalObject().setProperty("Qt", Qt);
+	if (context->argumentCount() != 1)
+		return QString();
 
-	globalObject().setProperty("QT_VERSION", QT_VERSION);
+	QString fileName = context->argument(0).toString();
+
+	QFile file(NSkinFileSystem::prefix() + fileName);
+	file.open(QFile::ReadOnly);
+	return QLatin1String(file.readAll());
+}
+
+QScriptValue maskImage(QScriptContext *context, QScriptEngine *engine)
+{
+	if (context->argumentCount() < 2)
+		return QScriptValue();
+
+	QString fileName = context->argument(0).toString();
+	QColor color(context->argument(1).toString());
+
+	qsreal opacity = 1.0;
+	if (context->argumentCount() == 3)
+		opacity = context->argument(2).toNumber();
+
+	QImage mask(NSkinFileSystem::prefix() + fileName);
+	QImage result(mask.size(), QImage::Format_ARGB32_Premultiplied);
+	QPainter painter(&result);
+	painter.fillRect(result.rect(), color);
+
+	painter.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+	
+	// hack for solid bitmaps
+	color.setAlpha(243);
+	painter.fillRect(0, 0, 1, 1, color);
+
+	painter.drawImage(mask.rect(), mask);
+
+	if (opacity != 1.0) {
+		QImage copy(result);
+		painter.fillRect(copy.rect(), Qt::transparent);
+		painter.setCompositionMode(QPainter::CompositionMode_Source);
+		painter.setOpacity(opacity);
+		painter.drawImage(copy.rect(), copy);
+	}
+
+	QByteArray byteArray;
+	QBuffer buffer(&byteArray);
+	result.save(&buffer, "PNG");
+	NSkinFileSystem::addFile(fileName, byteArray);
+
+	return QScriptValue();
+}
+
+NScriptEngine::NScriptEngine(NPlayer *player) : QScriptEngine(player)
+{
+	QScriptValue global = globalObject();
+
+	QScriptValue Qt = newQMetaObject(QtMetaObject::get());
+	global.setProperty("Qt", Qt);
+
+	global.setProperty("QT_VERSION", QT_VERSION);
 
 	QString ws;
 #if defined Q_WS_MAC
@@ -78,20 +134,20 @@ NScriptEngine::NScriptEngine(QObject *parent) : QScriptEngine(parent)
 #elif defined Q_WS_X11
 	ws = "x11";
 #endif
-	globalObject().setProperty("Q_WS", ws);
+	global.setProperty("Q_WS", ws);
 
-	QString buttons_side = "right";
+	QString direction = "right";
 	if (ws == "mac") {
-		buttons_side = "left";
+		direction = "left";
 	} else if (ws == "x11") {
 		QProcess gconftool;
 		gconftool.start("gconftool-2 --get \"/apps/metacity/general/button_layout\"");
 		gconftool.waitForStarted();
 		gconftool.waitForFinished();
 		if (gconftool.readAll().endsWith(":\n"))
-			buttons_side = "left";
+			direction = "left";
 	}
-	globalObject().setProperty("WS_BUTTOS_SIDE", buttons_side);
+	global.setProperty("WS_WM_BUTTON_DIRECTION", direction);
 
 	qScriptRegisterMetaType(this, NMarginsPrototype::toScriptValue, NMarginsPrototype::fromScriptValue);
 	setDefaultPrototype(qMetaTypeId<QWidget *>(), newQObject(&widgetPrototype));
@@ -101,10 +157,24 @@ NScriptEngine::NScriptEngine(QObject *parent) : QScriptEngine(parent)
 
 	qScriptRegisterMetaType<N::PlaybackState>(this, enumToScriptValue, enumFromScriptValue);
 	QScriptValue N = newQMetaObject(&N::staticMetaObject);
-	globalObject().setProperty("N", N);
+	global.setProperty("N", N);
 
 	qScriptRegisterMetaType<NMainWindow *>(this, qObjectToScriptVlaue, qObjectFromScriptValue);
+	QScriptValue ui = newObject();
+	global.setProperty("Ui", ui);
+	NMainWindow *mainWindow = player->mainWindow();
+	QList<QWidget *> widgets = mainWindow->findChildren<QWidget *>();
+	foreach (QWidget *widget, widgets)
+		ui.setProperty(widget->objectName(), newQObject(widget));
+	ui.setProperty(mainWindow->objectName(), newQObject(mainWindow));
+
 	qScriptRegisterMetaType<NPlaybackEngineInterface *>(this, qObjectToScriptVlaue, qObjectFromScriptValue);
+	global.setProperty("PlaybackEngine", newQObject(player->playbackEngine()));
+
 	qScriptRegisterMetaType<NSettings *>(this, qObjectToScriptVlaue, qObjectFromScriptValue);
+	global.setProperty("Settings", newQObject(NSettings::instance()));
+
+	globalObject().setProperty("readFile", newFunction(readFile));
+	globalObject().setProperty("maskImage", newFunction(maskImage));
 }
 

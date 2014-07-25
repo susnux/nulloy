@@ -25,6 +25,8 @@ class QString;
 
 class NShortcutEditorWidget : public QTableWidget
 {
+	Q_OBJECT
+
 private:
 	bool m_init;
 	QList<NAction *> m_actionList;

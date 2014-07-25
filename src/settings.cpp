@@ -48,8 +48,11 @@ NSettings::NSettings(QObject *parent) : QSettings(NCore::settingsPath(), QSettin
 	initValue("Shortcuts/prevAction", "Z");
 	initValue("Shortcuts/nextAction", "B");
 
+	initValue("Shortcuts/fullScreenAction", "F11");
+
 	initValue("PlaylistTrackInfo", "%F (%d)");
 	initValue("WindowTitleTrackInfo","\"{%a - %t|%F}\" - " + QCoreApplication::applicationName() + " %v");
+	initValue("TooltipTrackInfo", "%C");
 
 	initValue("Shuffle", FALSE);
 	initValue("Repeat", FALSE);
@@ -59,17 +62,33 @@ NSettings::NSettings(QObject *parent) : QSettings(NCore::settingsPath(), QSettin
 	initValue("TrayIcon", FALSE);
 	initValue("AlwaysOnTop", FALSE);
 	initValue("WhilePlayingOnTop", FALSE);
-	initValue("RestorePlayback", TRUE);
-	initValue("SingleInstanse", TRUE);
+	initValue("StartPaused", FALSE);
+	initValue("RestorePlaylist", TRUE);
+	initValue("SingleInstance", TRUE);
+	initValue("EnqueueFiles", TRUE);
+	initValue("PlayEnqueued", TRUE);
 	initValue("AutoCheckUpdates", TRUE);
 	initValue("DisplayLogDialog", TRUE);
 	initValue("LastDirectory", QDesktopServices::storageLocation(QDesktopServices::MusicLocation));
+	initValue("LoopPlaylist", FALSE);
 	initValue("LoadNext", FALSE);
 	initValue("ShowCoverArt", TRUE);
 	initValue("LoadNextSort", QDir::Name);
 	initValue("Volume", 0.8);
+	initValue("ShowDecibelsVolume", FALSE);
 
-	initValue("TrackInfo/TopLeft", "{%B kbps/%s kHz|}");
+#ifdef Q_WS_WIN
+	initValue("TaskbarProgress", TRUE);
+#endif
+
+	initValue("FileFilters", QStringList() << "*.m3u" << "*.m3u8"
+	                         << "*.mp3"  << "*.ogg" << "*.mp4" << "*.wma"
+	                         << "*.flac" << "*.ape" << "*.wav" << "*.wv" << "*.tta"
+	                         << "*.mpc"  << "*.spx" << "*.opus"
+	                         << "*.m4a"  << "*.aac" << "*.aiff"
+	                         << "*.xm"   << "*.s3m" << "*.it" << "*.mod");
+
+	initValue("TrackInfo/TopLeft", "{%B kbps/|}{%s kHz|}");
 	initValue("TrackInfo/MiddleCenter", "{%a - %t|%F}");
 	initValue("TrackInfo/BottomRight", "%T/%d");
 }
@@ -81,7 +100,9 @@ NSettings::~NSettings()
 
 NSettings* NSettings::instance()
 {
-	Q_ASSERT_X(m_instance, "NSettings", "NSettings instance has not been created yet.");
+	if (!m_instance)
+		m_instance = new NSettings();
+
 	return m_instance;
 }
 

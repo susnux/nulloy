@@ -33,7 +33,6 @@ class QMenu;
 class QNetworkAccessManager;
 class QNetworkReply;
 class QString;
-class QSystemTrayIcon;
 class QTimer;
 
 class NPlayer : public QWidget
@@ -52,6 +51,7 @@ private:
 	NTrackInfoWidget *m_trackInfoWidget;
 	NLogDialog *m_logDialog;
 	QNetworkAccessManager *m_versionDownloader;
+	QSystemTrayIcon *m_systemTray;
 	QTimer *m_trayClickTimer;
 	bool m_trayIconDoubleClickCheck;
 
@@ -62,9 +62,8 @@ public:
 	NPlayer();
 	~NPlayer();
 
-	Q_INVOKABLE NMainWindow* mainWindow();
-	Q_INVOKABLE NPlaybackEngineInterface* playbackEngine();
-	Q_INVOKABLE NSettings* settings();
+	NMainWindow* mainWindow();
+	NPlaybackEngineInterface* playbackEngine();
 
 private slots:
 	void loadSettings();
@@ -76,11 +75,12 @@ private slots:
 	void on_playbackEngine_mediaChanged(const QString &path);
 	void on_playbackEngine_stateChanged(N::PlaybackState state);
 	void on_alwaysOnTopAction_toggled(bool checked);
+	void on_fullScreenAction_toggled(bool checked);
 	void on_whilePlayingOnTopAction_toggled(bool checked);
 	void on_showCoverAction_toggled(bool checked);
 	void downloadVersion();
 	void on_versionDownloader_finished(QNetworkReply *reply);
-	void loadNextActionTriggered();
+	void playlistActionTriggered();
 	void on_trayClickTimer_timeout();
 	void trayIconCountClicks(int clicks);
 
@@ -92,7 +92,7 @@ public slots:
 	void showOpenDirDialog();
 	void showSavePlaylistDialog();
 	void showContextMenu(QPoint pos);
-	void message(const QString &str);
+	void readMessage(const QString &str);
 	void loadDefaultPlaylist();
 	void saveDefaultPlaylist();
 };

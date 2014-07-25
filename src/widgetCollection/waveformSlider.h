@@ -18,18 +18,21 @@
 
 #include <QAbstractSlider>
 #include <QVector>
+#include <QPainter>
 
 class NWaveformBuilderInterface;
 
 class NWaveformSlider : public QAbstractSlider
 {
 	Q_OBJECT
-	Q_PROPERTY(int radius READ getRadius WRITE setRadius DESIGNABLE true)
-	Q_PROPERTY(QBrush background READ getBackground WRITE setBackground DESIGNABLE true)
-	Q_PROPERTY(QBrush waveBackground READ getWaveBackground WRITE setWaveBackground DESIGNABLE true)
-	Q_PROPERTY(QColor waveBorderColor READ getWaveBorderColor WRITE setWaveBorderColor DESIGNABLE true)
-	Q_PROPERTY(QBrush progressBackground READ getProgressBackground WRITE setProgressBackground DESIGNABLE true)
-	Q_PROPERTY(QBrush pausedBackground READ getPausedBackground WRITE setPausedBackground DESIGNABLE true)
+	Q_PROPERTY(int radius READ radius WRITE setRadius)
+	Q_PROPERTY(QBrush  background                 READ background WRITE setBackground)
+	Q_PROPERTY(QBrush  wave_background            READ waveBackground  WRITE setWaveBackground)
+	Q_PROPERTY(QColor  wave_border_color          READ waveBorderColor WRITE setWaveBorderColor)
+	Q_PROPERTY(QBrush  progress_normal_background READ progressNormalBackground WRITE setProgressNormalBackground)
+	Q_PROPERTY(QBrush  progress_paused_background READ progressPausedBackground WRITE setProgressPausedBackground)
+	Q_PROPERTY(QString normal_composition         READ normalComposition WRITE setNormalComposition)
+	Q_PROPERTY(QString paused_composition         READ pausedComposition WRITE setPausedComposition)
 
 private:
 	NWaveformBuilderInterface *m_waveBuilder;
@@ -44,10 +47,9 @@ private:
 	float m_oldBuildPos;
 
 	void mousePressEvent(QMouseEvent *event);
-	void mouseMoveEvent(QMouseEvent *event);
-	void leaveEvent(QEvent *event);
 	void wheelEvent(QWheelEvent *event);
 	void paintEvent(QPaintEvent *event);
+	void changeEvent(QEvent *event);
 	void init();
 
 public:
@@ -57,14 +59,15 @@ public:
 
 public slots:
 	void drawFile(const QString &file);
-	void setValue(int value);
 	void setPausedState(bool);
-
-signals:
-	void mouseMoved(int x, int y);
+	void setValue(qreal value);
 
 private slots:
 	void checkForUpdate();
+	void setValue(int) {};
+
+signals:
+	void sliderMoved(qreal value);
 
 // STYLESHEET PROPERTIES
 private:
@@ -72,27 +75,36 @@ private:
 	QBrush m_background;
 	QBrush m_waveBackground;
 	QColor m_waveBorderColor;
-	QBrush m_progressBackground;
-	QBrush m_pausedBackground;
+	QBrush m_progressNormalBackground;
+	QBrush m_progressPausedBackground;
+	QPainter::CompositionMode m_normalComposition;
+	QPainter::CompositionMode m_pausedComposition;
+	bool m_needsUpdate;
 
 public:
-	int getRadius();
+	int radius();
 	void setRadius(int radius);
 
-	QBrush getBackground();
+	QBrush background();
 	void setBackground(QBrush brush);
 
-	QBrush getWaveBackground();
+	QBrush waveBackground();
 	void setWaveBackground(QBrush brush);
 
-	QColor getWaveBorderColor();
+	QColor waveBorderColor();
 	void setWaveBorderColor(QColor color);
 
-	QBrush getProgressBackground();
-	void setProgressBackground(QBrush brush);
+	QBrush progressNormalBackground();
+	void setProgressNormalBackground(QBrush brush);
 
-	QBrush getPausedBackground();
-	void setPausedBackground(QBrush brush);
+	QBrush progressPausedBackground();
+	void setProgressPausedBackground(QBrush brush);
+
+	QString normalComposition();
+	void setNormalComposition(const QString &mode);
+
+	QString pausedComposition();
+	void setPausedComposition(const QString &mode);
 };
 
 #endif

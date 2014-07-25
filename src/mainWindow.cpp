@@ -24,13 +24,6 @@
 #include <QUiLoader>
 #endif
 
-#ifndef _N_NO_PLUGINS_
-#include "pluginLoader.h"
-#include "tagReaderInterface.h"
-#else
-#include "tagReaderGstreamer.h"
-#endif
-
 #ifdef Q_WS_WIN
 #include "w7TaskBar.h"
 #include <windows.h>
@@ -41,7 +34,6 @@
 #include <QIcon>
 #include <QLayout>
 #include <QWindowStateChangeEvent>
-#include <QToolTip>
 #include <QTime>
 
 NMainWindow::NMainWindow(QWidget *parent) : QDialog(parent)
@@ -78,13 +70,10 @@ void NMainWindow::init(const QString &uiFile)
 	m_oldPos = QPoint(-1, -1);
 	m_oldSize = QSize(-1, -1);
 
-	m_waveformSlider = qFindChild<QWidget *>(this, "waveformSlider");
-	connect(m_waveformSlider, SIGNAL(mouseMoved(int, int)), this, SLOT(waveformSliderToolTip(int, int)));
-
 	// enabling dragging window from any point
 	QList<QWidget *> widgets = findChildren<QWidget *>();
-	for (int i = 0; i < widgets.size(); ++i)
-		widgets.at(i)->installEventFilter(this);
+	foreach (QWidget *widget, widgets)
+		widget->installEventFilter(this);
 
 	QIcon icon;
 #ifdef Q_WS_X11
@@ -263,7 +252,7 @@ bool NMainWindow::winEvent(MSG *message, long *result)
 		updateFramelessShadow();
 		return true;
 	} else {
-		return NW7TaskBar::winEvent(message, result);
+		return NW7TaskBar::instance()->winEvent(message, result);
 	}
 }
 #endif
@@ -274,6 +263,21 @@ void NMainWindow::toggleMaximize()
 		showNormal();
 	else
 		showMaximized();
+
+	emit fullScreenEnabled(FALSE);
+	emit maximizeEnabled(isMaximized());
+}
+
+void NMainWindow::showFullScreen()
+{
+	emit fullScreenEnabled(TRUE);
+	QDialog::showFullScreen();
+}
+
+void NMainWindow::showNormal()
+{
+	emit fullScreenEnabled(FALSE);
+	QDialog::showNormal();
 }
 
 void NMainWindow::setOnTop(bool onTop)
@@ -294,27 +298,7 @@ void NMainWindow::setOnTop(bool onTop)
 #endif
 
 #ifdef Q_WS_WIN
-	NW7TaskBar::setWindow(this);
+	NW7TaskBar::instance()->setWindow(this);
 #endif
-}
-
-void NMainWindow::waveformSliderToolTip(int x, int y)
-{
-	if (x != -1 && y != -1) {
-		float pos = (float)x / m_waveformSlider->width();
-		NTagReaderInterface *tagReader = dynamic_cast<NTagReaderInterface *>(NPluginLoader::getPlugin(N::TagReader));
-		int duration = tagReader->toString("%D").toInt();
-		int res = duration * pos;
-
-		int hours = res / 60 / 60;
-		QTime time = QTime().addSecs(res);
-		QString timeStr;
-		if (hours > 0)
-			timeStr = time.toString("h:mm:ss");
-		else
-			timeStr = time.toString("m:ss");
-
-		QToolTip::showText(m_waveformSlider->mapToGlobal(QPoint(x, y)), timeStr);
-	}
 }
 

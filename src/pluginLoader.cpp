@@ -26,9 +26,7 @@
 #include "coverReaderInterface.h"
 
 #include <QMessageBox>
-#include <QObject>
 #include <QPluginLoader>
-#include <QStringList>
 
 #ifdef _N_GSTREAMER_PLUGINS_BUILTIN_
 #include "playbackEngineGstreamer.h"
@@ -40,13 +38,13 @@ Q_DECLARE_METATYPE(QPluginLoader *)
 
 namespace NPluginLoader
 {
-	static bool _init = FALSE;
-	static QList<Descriptor> _descriptors;
-	static QMap<N::PluginType, NPlugin *> _usedPlugins;
-	static QMap<QPluginLoader *, bool> _usedLoaders;
+	bool __init = FALSE;
+	QList<Descriptor> _descriptors;
+	QMap<N::PluginType, NPlugin *> _usedPlugins;
+	QMap<QPluginLoader *, bool> _usedLoaders;
 	QString _containerPrefer = "GStreamer";
 
-	void _loadPlugins();
+	void _init();
 	NPlugin* _findPlugin(N::PluginType type);
 }
 
@@ -60,7 +58,7 @@ void NPluginLoader::deinit()
 
 NPlugin* NPluginLoader::_findPlugin(N::PluginType type)
 {
-	QString typeString = ENUM_NAME(N, PluginType, type);
+	QString typeString = ENUM_TO_STR(N, PluginType, type);
 	QString settingsContainer = NSettings::instance()->value("Plugins/" + typeString).toString();
 
 	QList<int> indexesFilteredByType;
@@ -99,11 +97,11 @@ NPlugin* NPluginLoader::_findPlugin(N::PluginType type)
 	return plugin;
 }
 
-void NPluginLoader::_loadPlugins()
+void NPluginLoader::_init()
 {
-	if (_init)
+	if (__init)
 		return;
-	_init = TRUE;
+	__init = TRUE;
 
 #if 0
 	QMap<QString, bool> usedFlags;
@@ -216,13 +214,13 @@ void NPluginLoader::_loadPlugins()
 
 NPlugin* NPluginLoader::getPlugin(N::PluginType type)
 {
-	_loadPlugins();
+	_init();
 	return _usedPlugins[type];
 }
 
 QList<NPluginLoader::Descriptor> NPluginLoader::descriptors()
 {
-	_loadPlugins();
+	_init();
 	return _descriptors;
 }
 

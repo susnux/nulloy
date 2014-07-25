@@ -81,6 +81,7 @@ NPlaylistWidget::NPlaylistWidget(QWidget *parent) : QListWidget(parent)
 	m_repeatMode = NSettings::instance()->value("Repeat").toBool();
 	m_shuffleMode = FALSE;
 	m_currentShuffledIndex = 0;
+	setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 }
 
 void NPlaylistWidget::contextMenuEvent(QContextMenuEvent *event)
@@ -96,38 +97,44 @@ void NPlaylistWidget::on_trashAction_triggered()
 	QStringList files;
 	foreach (QListWidgetItem *item, selectedItems())
 		files << QFileInfo(item->data(N::PathRole).toString()).canonicalFilePath();
-		
+
 	QStringList undeleted = NTrash::moveToTrash(files);
 	foreach (QListWidgetItem *item, selectedItems()) {
 		if (undeleted.contains(QFileInfo(item->data(N::PathRole).toString()).canonicalFilePath()))
 			continue;
 
-		QListWidgetItem *takenItem = takeItem(row(item));
-		delete takenItem;
+		delete takeItem(row(item));
 	}
-	
+
 	viewport()->update();
 }
 
 void NPlaylistWidget::on_removeAction_triggered()
 {
-	foreach (QListWidgetItem *item, selectedItems()) {
-		QListWidgetItem *takenItem = takeItem(row(item));
-		delete takenItem;
-	}
+	foreach (QListWidgetItem *item, selectedItems())
+		delete takeItem(row(item));
+
 	viewport()->update();
 }
 
 void NPlaylistWidget::on_revealAction_triggered()
 {
-	if (!NCore::revealInFileManager(selectedItems().first()->data(N::PathRole).toString()))
-		QMessageBox::warning(this, "File Manager Error", "File doesn't exist: " + selectedItems().first()->text());
+	QString error;
+	if (!NCore::revealInFileManager(selectedItems().first()->data(N::PathRole).toString(), &error))
+		QMessageBox::warning(this, QObject::tr("Reveal in File Manager Error"), error, QMessageBox::Close);
 }
 
 NPlaylistWidget::~NPlaylistWidget() {}
 
 void NPlaylistWidget::setCurrentItem(NPlaylistWidgetItem *item)
 {
+	if (!item) {
+		m_currentItem = NULL;
+		m_tagReader->setSource("");
+		emit mediaSet("");
+		return;
+	}
+
 	QString file = item->data(N::PathRole).toString();
 	// check if it's a playlist file:
 	QList<NPlaylistDataItem> dataItemsList = NPlaylistStorage::readPlaylist(file);
@@ -135,8 +142,7 @@ void NPlaylistWidget::setCurrentItem(NPlaylistWidgetItem *item)
 		int index = row(item);
 		int index_bkp = index;
 
-		QListWidgetItem *takenItem = takeItem(row(item));
-		delete takenItem;
+		delete takeItem(row(item));
 
 		foreach (NPlaylistDataItem dataItem, dataItemsList) {
 			insertItem(index, new NPlaylistWidgetItem(dataItem));
@@ -251,6 +257,7 @@ void NPlaylistWidget::addFiles(const QStringList &files)
 void NPlaylistWidget::setFiles(const QStringList &files)
 {
 	clear();
+	m_shuffledItems.clear();
 	m_currentItem = NULL;
 	foreach (QString path, files)
 		addItem(new NPlaylistWidgetItem(QFileInfo(path)));
@@ -259,6 +266,7 @@ void NPlaylistWidget::setFiles(const QStringList &files)
 bool NPlaylistWidget::setPlaylist(const QString &file)
 {
 	clear();
+	m_shuffledItems.clear();
 	m_currentItem = NULL;
 
 	QList<NPlaylistDataItem> dataItemsList = NPlaylistStorage::readPlaylist(file);
@@ -289,11 +297,13 @@ void NPlaylistWidget::playNextRow()
 	} else {
 		if (row < count() - 1) {
 			activateItem(item(row + 1));
+		} else if (NSettings::instance()->value("LoopPlaylist").toBool()) {
+			activateItem(item(0));
 		} else if (NSettings::instance()->value("LoadNext").toBool()) {
 			QDir::SortFlag flag = (QDir::SortFlag)NSettings::instance()->value("LoadNextSort").toInt();
 			QString file = m_currentItem->data(N::PathRole).toString();
 			QString path = QFileInfo(file).path();
-			QStringList entryList = QDir(path).entryList(QDir::Files | QDir::NoDotAndDotDot, flag);
+			QStringList entryList = QDir(path).entryList(NSettings::instance()->value("FileFilters").toStringList(), QDir::Files | QDir::NoDotAndDotDot, flag);
 			int index = entryList.indexOf(QFileInfo(file).fileName());
 			if (index != -1 && entryList.size() > index + 1) {
 				addItem(new NPlaylistWidgetItem(QFileInfo(path + "/" + entryList.at(index + 1))));
@@ -321,8 +331,11 @@ void NPlaylistWidget::playPreviousRow()
 			m_currentShuffledIndex = m_shuffledItems.count() - 1;
 		activateItem(m_shuffledItems.at(m_currentShuffledIndex));
 	} else {
-		if (row > 0)
+		if (row > 0) {
 			activateItem(item(row - 1));
+		} else if (NSettings::instance()->value("LoopPlaylist").toBool()) {
+			activateItem(item(count() - 1));
+		}
 	}
 }
 
@@ -338,12 +351,30 @@ void NPlaylistWidget::rowsInserted(const QModelIndex &parent, int start, int end
 
 void NPlaylistWidget::rowsAboutToBeRemoved(const QModelIndex &parent, int start, int end)
 {
+	bool currentRemoved = FALSE;
 	for (int i = start; i < end + 1; ++i) {
 		if (item(i) == m_currentItem)
-			m_currentItem = NULL;
-
+			currentRemoved = TRUE;
 		m_shuffledItems.removeAll(item(i));
 	}
+
+	NPlaylistWidgetItem *nextItem = NULL;
+	if (end < count() - 1)
+		nextItem = item(end + 1);
+
+	// set cursor focus
+	if (nextItem)
+		QListWidget::setCurrentItem(nextItem);
+	else
+		QListWidget::setCurrentItem(item(start - 1));
+
+	if (currentRemoved) {
+		if (nextItem && m_playbackEngine->state() != N::PlaybackStopped)
+			activateItem(nextItem);
+		else
+			setCurrentItem(nextItem);
+	}
+
 	QListWidget::rowsAboutToBeRemoved(parent, start, end);
 }
 
@@ -397,7 +428,7 @@ bool NPlaylistWidget::dropMimeData(int index, const QMimeData *data, Qt::DropAct
 {
 	Q_UNUSED(action);
 	foreach (QUrl url, data->urls()) {
-		foreach (QString file, NCore::dirListRecursive(url.toLocalFile())) {
+		foreach (QString file, NCore::dirListRecursive(url.toLocalFile(), NSettings::instance()->value("FileFilters").toStringList())) {
 			insertItem(index, new NPlaylistWidgetItem(QFileInfo(file)));
 			++index;
 		}
@@ -507,7 +538,7 @@ void NPlaylistWidget::setCurrentTextColor(QColor color)
 	m_currentTextColor = color;
 }
 
-QColor NPlaylistWidget::getCurrentTextColor() const
+QColor NPlaylistWidget::currentTextColor() const
 {
 	return m_currentTextColor;
 }
@@ -517,7 +548,7 @@ void NPlaylistWidget::setFailedTextColor(QColor color)
 	m_failedTextColor = color;
 }
 
-QColor NPlaylistWidget::getFailedTextColor() const
+QColor NPlaylistWidget::failedTextColor() const
 {
 	return m_failedTextColor;
 }

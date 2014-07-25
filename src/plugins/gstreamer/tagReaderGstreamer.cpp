@@ -43,10 +43,15 @@ void NTagReaderGstreamer::init()
 
 void NTagReaderGstreamer::setSource(const QString &file)
 {
-	if (m_taglist)
+	if (m_taglist) {
 		gst_tag_list_free(m_taglist);
+		m_taglist = NULL;
+	}
 
 	m_isValid = FALSE;
+
+	if (file.isEmpty())
+		return;
 
 	m_path = file;
 	gchar *uri = g_filename_to_uri(QFileInfo(file).absoluteFilePath().toUtf8().constData(), NULL, NULL);
@@ -67,14 +72,19 @@ void NTagReaderGstreamer::setSource(const QString &file)
 	}
 
 	m_sampleRate = gst_discoverer_audio_info_get_sample_rate((GstDiscovererAudioInfo *)audioInfo->data) / (float)1000;
+	m_bitDepth = gst_discoverer_audio_info_get_depth((GstDiscovererAudioInfo *)audioInfo->data);
 	gst_discoverer_stream_info_list_free(audioInfo);
 
 	m_nanosecs = gst_discoverer_info_get_duration(info);
 
 	const GstTagList *tagList = gst_discoverer_info_get_tags(info);
 	m_taglist = gst_tag_list_copy(tagList);
-	if (gst_is_tag_list(m_taglist) && !gst_tag_list_is_empty(m_taglist))
+	if (gst_is_tag_list(m_taglist) && !gst_tag_list_is_empty(m_taglist)) {
+		gchar *gstr = NULL;
+		if (gst_tag_list_get_string(m_taglist, GST_TAG_AUDIO_CODEC, &gstr))
+			m_codecName = QString::fromUtf8(gstr);
 		m_isValid = TRUE;
+	}
 }
 
 NTagReaderGstreamer::~NTagReaderGstreamer()
@@ -119,7 +129,7 @@ QString NTagReaderGstreamer::parse(const QString &format, bool *success, bool st
 				if (!(*success = gst_tag_list_get_string(m_taglist, GST_TAG_TITLE, &gstr)))
 					res += "<Unknown title>";
 				else
-					res += gstr;
+					res += QString::fromUtf8(gstr);
 			} else if (ch == 'A') {
 				if (!(*success = gst_tag_list_get_string(m_taglist, GST_TAG_ALBUM, &gstr)))
 					res += "<Unknown album>";
@@ -156,6 +166,13 @@ QString NTagReaderGstreamer::parse(const QString &format, bool *success, bool st
 				else
 					str = "<Unknown track number>";
 				res += str;
+			} else if (ch == 'b') {
+				if (m_codecName.contains("MP3")) {
+					res += "<Unknown bit depth>";
+					*success = FALSE;
+				} else {
+					res += QString::number(m_bitDepth);
+				}
 			} else if (ch == 'd') {
 				QString duration;
 				if (seconds_total > 0) {
@@ -200,6 +217,10 @@ QString NTagReaderGstreamer::parse(const QString &format, bool *success, bool st
 				res += QFileInfo(m_path).fileName();
 			} else if (ch == 'p') {
 				res += QFileInfo(m_path).absoluteFilePath();
+			} else if (ch == 'e') {
+				res += QFileInfo(m_path).suffix();
+			} else if (ch == 'E') {
+				res += QFileInfo(m_path).suffix().toUpper();
 			} else if (ch == 'v') {
 				res += QCoreApplication::applicationVersion();
 			} else {

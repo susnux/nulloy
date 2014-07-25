@@ -22,10 +22,12 @@ Music player with a waveform progress bar.
 %build
 %if 0%{?fedora_version}
 %define QMAKE qmake-qt4
+%define LRELEASE lrelease-qt4
 %else
 %define QMAKE qmake
+%define LRELEASE lrelease
 %endif
-QMAKE=%{QMAKE} ./configure --taglib --prefix=%{buildroot}%{_prefix}
+QMAKE=%{QMAKE} LRELEASE=%{LRELEASE} ./configure --taglib --prefix=%{buildroot}%{_prefix}
 make
 
 %install
@@ -35,6 +37,7 @@ make
 %defattr(-,root,root)
 %{_bindir}/%{name}
 %{_datadir}/%{name}/skins/*
+%{_datadir}/%{name}/i18n/*
 %{_datadir}/icons/*
 %{_datadir}/applications/%{name}.desktop
 

@@ -16,8 +16,7 @@
 #ifndef N_COMMON_H
 #define N_COMMON_H
 
-class QString;
-class QStringList;
+#include <QStringList>
 
 namespace NCore
 {
@@ -26,8 +25,8 @@ namespace NCore
 	QString defaultPlaylistPath();
 	QString settingsPath();
 	QString rcDir();
-	QStringList dirListRecursive(const QString &path);
-	bool revealInFileManager(const QString &file);
+	QStringList dirListRecursive(const QString &path, const QStringList &nameFilters = QStringList());
+	bool revealInFileManager(const QString &file, QString *error);
 }
 
 #endif

@@ -31,7 +31,9 @@ private:
 	GstTagList *m_taglist;
 	gint64 m_nanosecs;
 	float m_sampleRate;
+	int m_bitDepth;
 	bool m_isValid;
+	QString m_codecName;
 	QString parse(const QString &format, bool *success, bool stopOnFail = FALSE);
 
 public:

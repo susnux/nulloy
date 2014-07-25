@@ -17,9 +17,12 @@
 
 #include <QtCore>
 #include <QCoreApplication>
-#include <QStringList>
 #include <QDir>
 #include <QFileInfo>
+
+#ifdef Q_WS_WIN
+#include <QSettings>
+#endif
 
 namespace NCore
 {
@@ -30,7 +33,7 @@ namespace NCore
 	static bool _rcDir_init = FALSE;
 	static QString _rcDir = "./";
 
-	static QStringList _processPath(const QString &path);
+	static QStringList _processPath(const QString &path, const QStringList &nameFilters);
 }
 
 void NCore::cArgs(int *argc, const char ***argv)
@@ -72,7 +75,22 @@ QString NCore::rcDir()
 		else
 			_rcDir = QCoreApplication::applicationDirPath();
 #else
-		_rcDir = QCoreApplication::applicationDirPath();
+		QDir parentDir(QCoreApplication::applicationDirPath());
+		parentDir.cdUp();
+
+		QSettings registryMachine("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion", QSettings::NativeFormat);
+		QDir programFilesDir(registryMachine.value("ProgramFilesDir", "C:/Program Files").toString());
+		QDir programFilesDirX86(registryMachine.value("ProgramFilesDir (x86)", "C:/Program Files (x86)").toString());
+
+		if (parentDir == programFilesDir || parentDir == programFilesDirX86) {
+			QString appData = QProcessEnvironment::systemEnvironment ().value("AppData");
+			if (appData != "")
+				_rcDir = appData + "/Nulloy";
+			else
+				_rcDir = QCoreApplication::applicationDirPath();
+		} else {
+			_rcDir = QCoreApplication::applicationDirPath();
+		}
 #endif
 		QDir dir(_rcDir);
 		if (!dir.exists())
@@ -84,30 +102,37 @@ QString NCore::rcDir()
 }
 
 
-QStringList NCore::_processPath(const QString &path)
+QStringList NCore::_processPath(const QString &path, const QStringList &nameFilters)
 {
 	QStringList list;
 	if (QFileInfo(path).isDir()) {
-		QStringList entryList = QDir(path).entryList(QDir::AllEntries | QDir::NoDotAndDotDot);
+		QStringList entryList;
+		if (!nameFilters.isEmpty())
+			entryList = QDir(path).entryList(nameFilters, QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot);
+		else
+			entryList = QDir(path).entryList(QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot);
+
 		foreach (QString f, entryList)
-			list << _processPath(path + "/" + f);
+			list << _processPath(path + "/" + f, nameFilters);
 	} else {
 		list << path;
 	}
 	return list;
 }
 
-QStringList NCore::dirListRecursive(const QString &path)
+QStringList NCore::dirListRecursive(const QString &path, const QStringList &nameFilters)
 {
-	return _processPath(path);
+	return _processPath(path, nameFilters);
 }
 
-bool NCore::revealInFileManager(const QString &file)
+bool NCore::revealInFileManager(const QString &file, QString *error)
 {
 	QFileInfo fileInfo(file);
 
-	if (!fileInfo.exists())
+	if (!fileInfo.exists()) {
+		*error = QString(QObject::tr("File doesn't exist: <b>%1</b>")).arg(QFileInfo(file).fileName());
 		return FALSE;
+	}
 
 	QString fileManagerCommand;
 	QStringList arguments;
@@ -123,6 +148,10 @@ bool NCore::revealInFileManager(const QString &file)
 	xdg.waitForFinished();
 
 	fileManagerCommand = QString::fromUtf8(xdg.readAll()).simplified().remove(".desktop");
+	if (QProcess::execute("which " + fileManagerCommand) != 0) {
+		*error = QString(QObject::tr("Default file manager is set to <b>%1</b> but it's not available.")).arg(fileManagerCommand);
+		return FALSE;
+	}
 
 	if (fileManagerCommand == "dolphin") {
 		arguments << "--select";

@@ -17,7 +17,6 @@
 #include "waveformBuilderInterface.h"
 
 #include <QMouseEvent>
-#include <QPainter>
 #include <QFile>
 #include <QStylePainter>
 #include <QStyleOptionFocusRect>
@@ -34,10 +33,11 @@ NWaveformSlider::NWaveformSlider(QWidget *parent) : QAbstractSlider(parent)
 	m_background = QBrush(Qt::darkBlue);
 	m_waveBackground = QBrush(Qt::darkGreen);
 	m_waveBorderColor = QColor(Qt::green);
-	m_progressBackground = QBrush(Qt::darkCyan);
-	m_pausedBackground = QBrush(Qt::darkGray);
+	m_progressNormalBackground = QBrush(Qt::darkCyan);
+	m_progressPausedBackground = QBrush(Qt::darkGray);
+	m_normalComposition = QPainter::CompositionMode_Overlay;
+	m_pausedComposition = QPainter::CompositionMode_Overlay;
 
-	setMouseTracking(TRUE);
 
 #ifndef _N_NO_PLUGINS_
 	m_waveBuilder = dynamic_cast<NWaveformBuilderInterface *>(NPluginLoader::getPlugin(N::WaveformBuilder));
@@ -69,6 +69,7 @@ void NWaveformSlider::init()
 	m_oldIndex = -1;
 	m_oldBuildPos = -1;
 	m_pausedState = FALSE;
+	m_needsUpdate = FALSE;
 	setEnabled(FALSE);
 
 	setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
@@ -88,18 +89,18 @@ void NWaveformSlider::checkForUpdate()
 	if (!m_waveBuilder)
 		return;
 
-	bool needsUpdate = FALSE;
 	if (m_oldValue != value() || m_oldSize != size())
-		needsUpdate = TRUE;
+		m_needsUpdate = TRUE;
 
 	float pos;
 	int index;
 	m_waveBuilder->positionAndIndex(pos, index);
 
-	if (!(pos < 0 || index < 0) &&
-	    !(m_oldBuildPos == pos &&
-	    m_oldIndex == index &&
-	    m_waveImage.size() == size()))
+	if ((!(pos < 0 || index < 0) &&
+	     !(m_oldBuildPos == pos &&
+	     m_oldIndex == index &&
+	     m_waveImage.size() == size())) ||
+	    m_needsUpdate)
 	{
 		m_oldBuildPos = pos;
 		m_oldIndex = index;
@@ -132,23 +133,11 @@ void NWaveformSlider::checkForUpdate()
 		fullPath.connectPath(pathPos.toReversed());
 		fullPath.closeSubpath();
 		painter.drawPath(fullPath);
-
-		needsUpdate = TRUE;
 	}
 
-	if (needsUpdate)
+	if (m_needsUpdate)
 		update();
-}
-
-void NWaveformSlider::mouseMoveEvent(QMouseEvent *event)
-{
-	emit mouseMoved(event->x(), event->y());
-}
-
-void NWaveformSlider::leaveEvent(QEvent *event)
-{
-	Q_UNUSED(event);
-	emit mouseMoved(-1, -1);
+	m_needsUpdate = FALSE;
 }
 
 void NWaveformSlider::paintEvent(QPaintEvent *event)
@@ -184,10 +173,14 @@ void NWaveformSlider::paintEvent(QPaintEvent *event)
 		painter.begin(&m_bufImage[3]);
 		// progress rectangle
 		painter.setPen(Qt::NoPen);
-		if (!m_pausedState)
-			painter.setBrush(m_progressBackground);
-		else
-			painter.setBrush(m_pausedBackground);
+		QPainter::CompositionMode progressComposition;
+		if (!m_pausedState) {
+			painter.setBrush(m_progressNormalBackground);
+			progressComposition = m_normalComposition;
+		} else {
+			painter.setBrush(m_progressPausedBackground);
+			progressComposition = m_pausedComposition;
+		}
 		painter.drawRect(rect().adjusted(0, 0, x - width(), 0));
 		painter.end();
 
@@ -219,7 +212,7 @@ void NWaveformSlider::paintEvent(QPaintEvent *event)
 		painter.drawImage(0, 0, m_bufImage[0]);
 		painter.drawImage(0, 0, m_bufImage[1]);
 		painter.drawImage(0, 0, m_bufImage[5]);
-		painter.setCompositionMode(QPainter::CompositionMode_Overlay);
+		painter.setCompositionMode(progressComposition);
 		painter.drawImage(0, 0, m_bufImage[4]);
 
 		// progress line
@@ -251,10 +244,9 @@ void NWaveformSlider::mousePressEvent(QMouseEvent *event)
 	if (event->button() == Qt::RightButton)
 		return;
 
-	int value = qreal(event->x()) / width() * maximum();
+	qreal value = (qreal)event->x() / width();
 
 	emit sliderMoved(value);
-//	emit valueChanged(value);
 	setValue(value);
 }
 
@@ -263,11 +255,16 @@ void NWaveformSlider::wheelEvent(QWheelEvent *event)
 	event->accept();
 }
 
-void NWaveformSlider::setValue(int value)
+void NWaveformSlider::changeEvent(QEvent *event)
 {
-	QAbstractSlider::setValue(value);
+	if (event->type() == QEvent::StyleChange)
+		m_needsUpdate = TRUE;
+	QWidget::changeEvent(event);
+}
 
-//	update();
+void NWaveformSlider::setValue(qreal value)
+{
+	QAbstractSlider::setValue(value * maximum());
 }
 
 void NWaveformSlider::drawFile(const QString &file)
@@ -283,7 +280,7 @@ void NWaveformSlider::drawFile(const QString &file)
 
 // STYLESHEET PROPERTIES
 
-int NWaveformSlider::getRadius()
+int NWaveformSlider::radius()
 {
 	return m_radius;
 }
@@ -293,7 +290,7 @@ void NWaveformSlider::setRadius(int radius)
 	m_radius = radius;
 }
 
-QBrush NWaveformSlider::getBackground()
+QBrush NWaveformSlider::background()
 {
 	return m_background;
 }
@@ -303,7 +300,7 @@ void NWaveformSlider::setBackground(QBrush brush)
 	m_background = brush;
 }
 
-QBrush NWaveformSlider::getWaveBackground()
+QBrush NWaveformSlider::waveBackground()
 {
 	return m_waveBackground;
 }
@@ -313,7 +310,7 @@ void NWaveformSlider::setWaveBackground(QBrush brush)
 	m_waveBackground = brush;
 }
 
-QColor NWaveformSlider::getWaveBorderColor()
+QColor NWaveformSlider::waveBorderColor()
 {
 	return m_waveBorderColor;
 }
@@ -323,23 +320,42 @@ void NWaveformSlider::setWaveBorderColor(QColor color)
 	m_waveBorderColor = color;
 }
 
-QBrush NWaveformSlider::getProgressBackground()
+QBrush NWaveformSlider::progressNormalBackground()
 {
-	return m_progressBackground;
+	return m_progressNormalBackground;
 }
 
-void NWaveformSlider::setProgressBackground(QBrush brush)
+void NWaveformSlider::setProgressNormalBackground(QBrush brush)
 {
-	m_progressBackground = brush;
+	m_progressNormalBackground = brush;
 }
 
-QBrush NWaveformSlider::getPausedBackground()
+QBrush NWaveformSlider::progressPausedBackground()
 {
-	return m_pausedBackground;
+	return m_progressPausedBackground;
 }
 
-void NWaveformSlider::setPausedBackground(QBrush brush)
+void NWaveformSlider::setProgressPausedBackground(QBrush brush)
 {
-	m_pausedBackground = brush;
+	m_progressPausedBackground = brush;
 }
 
+QString NWaveformSlider::normalComposition()
+{
+	return ENUM_TO_STR(N, CompositionMode, m_normalComposition);
+}
+
+void NWaveformSlider::setNormalComposition(const QString &mode)
+{
+	m_normalComposition = (QPainter::CompositionMode)STR_TO_ENUM(N, CompositionMode, mode.toAscii());
+}
+
+QString NWaveformSlider::pausedComposition()
+{
+	return ENUM_TO_STR(N, CompositionMode, m_pausedComposition);
+}
+
+void NWaveformSlider::setPausedComposition(const QString &mode)
+{
+	m_pausedComposition = (QPainter::CompositionMode)STR_TO_ENUM(N, CompositionMode, mode.toAscii());
+}

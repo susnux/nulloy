@@ -64,17 +64,20 @@ public slots:
 	void setTitle(QString title);
 	void toggleMaximize();
 	void toggleVisibility();
+	void showNormal();
+	void showFullScreen();
 	void setOnTop(bool onTop);
 
 private slots:
 	void loadSettings();
 	void saveSettings();
-	void waveformSliderToolTip(int x, int y);
 
 signals:
 	void closed();
 	void resized();
 	void newTitle(const QString &title);
+	void fullScreenEnabled(bool enabled);
+	void maximizeEnabled(bool enabled);
 };
 
 #endif

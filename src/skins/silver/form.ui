@@ -10,13 +10,14 @@
     <height>505</height>
    </rect>
   </property>
-  <property name="windowTitle">
-   <string>Dialog</string>
-  </property>
   <property name="styleSheet">
    <string notr="true">#titleLabel {
 	color : #141414;
+	qproperty-shadow_enabled: true;
+	qproperty-shadow_offset_y: 1;
+	qproperty-shadow_color: #FFFFFF;
 }
+
 #borderWidget {
 	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #767676, stop: 1 #515151);
 }
@@ -55,20 +56,20 @@
 }
 
 #playlistWidget {
-	color: black;
-	qproperty-currentTextColor: black;
-	qproperty-failedTextColor: #949494;
-	background: white;
+	color: #000000;
+	qproperty-current_text_color: #000000;
+	qproperty-failed_text_color: #949494;
+	background: #FFFFFF;
 	padding: 5;
 }
 #playlistWidget::item {
-	background: white;
+	background: #FFFFFF;
 }
 #playlistWidget::item:alternate {
 	background: #E9E9E9;
 }
 #playlistWidget::item:selected {
-	color: black;
+	color: #000000;
 	background: #BBBBBB;
 }
 
@@ -79,19 +80,21 @@
 }
 #playlistWidget QScrollBar::handle {
 	border-radius: 4px;
-	border: 1px solid white;
+	border: 1px solid #FFFFFF;
 	background: qlineargradient(spread:pad, x1:0.1, y1:0, x2:0.9, y2:0, stop:0 #AAAAAA, stop:1 #919191);
 	margin-left: 5;
 	border: 5;
+	min-height: 30px;
 }
 #playlistWidget QScrollBar::handle:hover {
 	background: qlineargradient(spread:pad, x1:0.1, y1:0, x2:0.9, y2:0, stop:0 #919191, stop:1 #828282);
 }
 #playlistWidget QScrollBar::add-line,
-QScrollBar::sub-line,
-QScrollBar::add-page,
-QScrollBar::sub-page {
-	background: none;
+#playlistWidget QScrollBar::sub-line,
+#playlistWidget QScrollBar::add-page,
+#playlistWidget QScrollBar::sub-page {
+	height: 0px;
+	background: transparent;
 }
 
 #playlistToggleButton {
@@ -234,7 +237,32 @@ QScrollBar::sub-page {
 #volumeSlider::handle:horizontal:hover {
 	background: qlineargradient(spread:pad, x1:0, y1:0.1, x2:0, y2:0.9, stop:0 #F8F8F8, stop:1 #FBFFE0);
 }
-</string>
+
+#waveformSlider {
+	background: #000000;
+	qproperty-radius: 5;
+	qproperty-background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #28323D, stop:1 #3F4F61);
+	qproperty-wave_background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #55A807, stop:1 #366B04);
+	qproperty-wave_border_color: #8AE234;
+	qproperty-progress_normal_background: #0080ff;
+	qproperty-progress_paused_background: #CE8419;
+}
+
+NTrackInfoWidget QLabel {
+	color: #FFFFFF;
+	background: argb(0, 0, 0, 180);
+	border-radius: 7;
+	padding: 0 3;
+	max-height: 14px;
+	font-size: 11px;
+	font-weight: bold;
+}
+
+NTrackInfoWidget #MiddleCenter {
+	border-radius: 8;
+	padding-bottom: 2;
+	font-size: 13px;
+}</string>
   </property>
   <property name="sizeGripEnabled">
    <bool>true</bool>
@@ -688,7 +716,7 @@ QScrollBar::sub-page {
             <number>5</number>
            </property>
            <property name="childrenCollapsible">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <widget class="QWidget" name="backgroundWidget" native="true">
             <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -784,14 +812,6 @@ QScrollBar::sub-page {
                        <bold>true</bold>
                       </font>
                      </property>
-                     <property name="styleSheet">
-                      <string notr="true">#titleLabel {
-	qproperty-shadowEnabled: true;
-	qproperty-shadowOffsetY: 1;
-	qproperty-shadowColor: white;
-}
-                  </string>
-                     </property>
                      <property name="text">
                       <string notr="true">Nulloy</string>
                      </property>
@@ -857,6 +877,9 @@ QScrollBar::sub-page {
                              <verstretch>0</verstretch>
                             </sizepolicy>
                            </property>
+                           <property name="toolTip">
+                            <string>Minimize</string>
+                           </property>
                            <property name="text">
                             <string/>
                            </property>
@@ -908,6 +931,9 @@ QScrollBar::sub-page {
                              <horstretch>0</horstretch>
                              <verstretch>0</verstretch>
                             </sizepolicy>
+                           </property>
+                           <property name="toolTip">
+                            <string>Close</string>
                            </property>
                            <property name="text">
                             <string/>
@@ -964,20 +990,7 @@ QScrollBar::sub-page {
                    </widget>
                   </item>
                   <item>
-                   <widget class="NWaveformSlider" name="waveformSlider" native="true">
-                    <property name="styleSheet">
-                     <string notr="true">#waveformSlider {
-	background: black;
-	qproperty-radius: 5;
-	qproperty-background: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #28323D, stop:1 #3f4f61);
-	qproperty-waveBackground: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #55A807, stop:1 #366B04);
-	qproperty-waveBorderColor: #8ae234;
-	qproperty-progressBackground: #0080ff;
-	qproperty-pausedBackground: #ce8419;
-}
-                  </string>
-                    </property>
-                   </widget>
+                   <widget class="NWaveformSlider" name="waveformSlider" native="true"/>
                   </item>
                  </layout>
                 </item>
@@ -998,7 +1011,7 @@ QScrollBar::sub-page {
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QWidget" name="widget" native="true">
+                 <widget class="QWidget" name="controlsContainer" native="true">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
                     <horstretch>0</horstretch>
@@ -1218,39 +1231,6 @@ QScrollBar::sub-page {
                     </widget>
                    </item>
                    <item>
-                    <widget class="QToolButton" name="playlistToggleButton">
-                     <property name="sizePolicy">
-                      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                       <horstretch>0</horstretch>
-                       <verstretch>0</verstretch>
-                      </sizepolicy>
-                     </property>
-                     <property name="minimumSize">
-                      <size>
-                       <width>60</width>
-                       <height>11</height>
-                      </size>
-                     </property>
-                     <property name="maximumSize">
-                      <size>
-                       <width>60</width>
-                       <height>11</height>
-                      </size>
-                     </property>
-                     <property name="font">
-                      <font>
-                       <pointsize>8</pointsize>
-                      </font>
-                     </property>
-                     <property name="focusPolicy">
-                      <enum>Qt::NoFocus</enum>
-                     </property>
-                     <property name="text">
-                      <string/>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
                     <widget class="QSizeGrip" name="sizeGrip" native="true">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -1334,7 +1314,7 @@ QScrollBar::sub-page {
                        <number>1</number>
                       </property>
                       <item>
-                       <widget class="NSlider" name="volumeSlider">
+                       <widget class="NVolumeSlider" name="volumeSlider">
                         <property name="sizePolicy">
                          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                           <horstretch>0</horstretch>
@@ -1384,7 +1364,7 @@ QScrollBar::sub-page {
              </item>
             </layout>
            </widget>
-           <widget class="QWidget" name="widget_4" native="true">
+           <widget class="QWidget" name="playlistContainer" native="true">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
               <horstretch>0</horstretch>
@@ -1471,11 +1451,6 @@ QScrollBar::sub-page {
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>NSlider</class>
-   <extends>QSlider</extends>
-   <header>slider.h</header>
-  </customwidget>
-  <customwidget>
    <class>NDropArea</class>
    <extends>QWidget</extends>
    <header>dropArea.h</header>
@@ -1487,11 +1462,6 @@ QScrollBar::sub-page {
    <header>playlistWidget.h</header>
   </customwidget>
   <customwidget>
-   <class>NCoverWidget</class>
-   <extends>QLabel</extends>
-   <header>coverWidget.h</header>
-  </customwidget>
-  <customwidget>
    <class>NLabel</class>
    <extends>QLabel</extends>
    <header>label.h</header>
@@ -1501,6 +1471,16 @@ QScrollBar::sub-page {
    <extends>QWidget</extends>
    <header>qsizegrip.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>NCoverWidget</class>
+   <extends>QLabel</extends>
+   <header>coverWidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>NVolumeSlider</class>
+   <extends>QSlider</extends>
+   <header>volumeSlider.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

@@ -14,6 +14,7 @@
 *********************************************************************/
 
 #include "player.h"
+#include "settings.h"
 #include <qtsingleapplication.h>
 
 #ifndef _N_NO_SKINS_
@@ -33,9 +34,11 @@ int main(int argc, char *argv[])
 		msg = argList.join("<|>");
 	}
 
-	// try to send it to an already running instrance
-	if (!msg.isEmpty() && instance.sendMessage(msg))
-		return 0; // return if delivered
+	if (NSettings::instance()->value("SingleInstance").toBool()) {
+		// try to send it to an already running instrance
+		if (instance.sendMessage(msg))
+			return 0; // return if delivered
+	}
 
 	QApplication::setQuitOnLastWindowClosed(FALSE);
 	QCoreApplication::setApplicationName("Nulloy");
@@ -53,14 +56,16 @@ int main(int argc, char *argv[])
 
 	NPlayer p;
 	QObject::connect(&instance, SIGNAL(messageReceived(const QString &)),
-	                 &p, SLOT(message(const QString &)));
+	                 &p, SLOT(readMessage(const QString &)));
+
+	if (NSettings::instance()->value("RestorePlaylist").toBool()) {
+		// try to load default playlist (will fail if msg contained files)
+		p.loadDefaultPlaylist();
+	}
 
 	// manually read the message
 	if (!msg.isEmpty())
-		p.message(msg);
-
-	// try to load default playlist (will fail if msg contained files)
-	p.loadDefaultPlaylist();
+		p.readMessage(msg);
 
 	instance.installEventFilter(&p);
 

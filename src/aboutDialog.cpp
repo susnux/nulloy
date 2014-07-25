@@ -47,10 +47,10 @@ NAboutDialog::NAboutDialog(QWidget *parent) : QDialog(parent)
 #else
 		"<span style=\"font-size:8pt;\">" +
 #endif
-			"Version: " + QCoreApplication::applicationVersion() + "<br>" +
-			              (QString(_N_TIME_STAMP_).isEmpty() ? "" : "Build: " + QString(_N_TIME_STAMP_)) +
+			tr("Version: ") + QCoreApplication::applicationVersion() + "<br>" +
+			              (QString(_N_TIME_STAMP_).isEmpty() ? "" : tr("Build: ") + QString(_N_TIME_STAMP_)) +
 			"<br><br>" +
-			"Copyright (C) 2010-2014  Sergey Vlasov &lt;sergey@vlasov.me&gt;"
+			"Copyright (C) 2010-2014  Sergey Vlasov &lt;sergey@vlasov.me&gt;" +
 		"</span>";
 
 	setWindowTitle(QObject::tr("About ") + QCoreApplication::applicationName());
@@ -62,9 +62,9 @@ NAboutDialog::NAboutDialog(QWidget *parent) : QDialog(parent)
 	QTabWidget *tabWidget = new QTabWidget(parent);
 	layout->addWidget(tabWidget);
 
-	// about tab
+	// about tab >>
 	QWidget *aboutTab = new QWidget;
-	tabWidget->addTab(aboutTab, tr("About"));
+	tabWidget->addTab(aboutTab, tr("Common"));
 	QVBoxLayout *aboutTabLayout = new QVBoxLayout;
 	aboutTab->setLayout(aboutTabLayout);
 
@@ -91,9 +91,30 @@ NAboutDialog::NAboutDialog(QWidget *parent) : QDialog(parent)
 	aboutTextBrowser->setHtml("<center>" + aboutHtml + "</center>");
 
 	aboutTabLayout->addWidget(aboutTextBrowser);
-	//
+	// << about tab
 
-	// changelog tab
+	// thanks tab >>
+	QWidget *thanksTab = new QWidget;
+	tabWidget->addTab(thanksTab, tr("Thanks"));
+	QVBoxLayout *thanksTabLayout = new QVBoxLayout;
+	thanksTabLayout->setContentsMargins(0, 0, 0, 0);
+	thanksTab->setLayout(thanksTabLayout);
+
+	QFile thanksFile( ":/THANKS");
+	thanksFile.open(QIODevice::ReadOnly | QIODevice::Text);
+	QTextStream thanksStream(&thanksFile);
+	QString thanksText = thanksStream.readAll();
+	thanksText.replace(QRegExp("(\\w)\\n(\\w)"), "\\1 \\2");
+	thanksText.remove("\n\n\n");
+	thanksFile.close();
+
+	QTextBrowser *thanksTextBrowser = new QTextBrowser;
+	thanksTextBrowser->setText(thanksText);
+
+	thanksTabLayout->addWidget(thanksTextBrowser);
+	// << thanks tab
+
+	// changelog tab >>
 	QWidget *changelogTab = new QWidget;
 	tabWidget->addTab(changelogTab, tr("Changelog"));
 	QVBoxLayout *changelogTabLayout = new QVBoxLayout;
@@ -112,9 +133,9 @@ NAboutDialog::NAboutDialog(QWidget *parent) : QDialog(parent)
 	changelogTextBrowser->setHtml(changelogHtml);
 	changelogTextBrowser->setOpenExternalLinks(TRUE);
 	changelogTabLayout->addWidget(changelogTextBrowser);
-	//
+	// << changelog tab
 
-	// license tab
+	// license tab >>
 	QWidget *licenseTab = new QWidget;
 	tabWidget->addTab(licenseTab, tr("License"));
 	QVBoxLayout *licenseTabLayout = new QVBoxLayout;
@@ -137,7 +158,7 @@ NAboutDialog::NAboutDialog(QWidget *parent) : QDialog(parent)
 			"<br>"
 			"You should have received a copy of the GNU General Public License "
 			"along with this program. If not, see "
-			"<a href='http://www.gnu.org/licenses/gpl-3.0.html'>http://www.gnu.org/licenses/gpl-3.0.html</a>.";
+			"<a href='http://www.gnu.org/licenses/gpl-3.0.html'>http://www.gnu.org/licenses/gpl-3.0.html</a>."
 		"</span>";
 
 	QTextBrowser *licenseTextBrowser = new QTextBrowser;
@@ -152,9 +173,9 @@ NAboutDialog::NAboutDialog(QWidget *parent) : QDialog(parent)
 	licenseTabLayout->addItem(new QSpacerItem(1, 1, QSizePolicy::Expanding, QSizePolicy::Expanding));
 	licenseTabLayout->addWidget(licenseTextBrowser);
 	licenseTabLayout->addItem(new QSpacerItem(1, 1, QSizePolicy::Expanding, QSizePolicy::Expanding));
-	//
+	// << license tab
 
-	QPushButton *closeButton = new QPushButton("Close");
+	QPushButton *closeButton = new QPushButton(tr("Close"));
 	connect(closeButton, SIGNAL(clicked()), this, SLOT(accept()));
 	QHBoxLayout *buttonLayout = new QHBoxLayout();
 	buttonLayout->addStretch();
@@ -170,12 +191,10 @@ void NAboutDialog::show()
 	QDialog::show();
 	
 	// resize according to content
-	QTextBrowser *aboutTextBrowser = qFindChild<QTextBrowser *>(parent(), "aboutTextBrowser");
-	QSize aboutTextSize = aboutTextBrowser->document()->size().toSize();
-	aboutTextBrowser->setMinimumHeight(aboutTextSize.height());
-
-	QTextBrowser *licenseTextBrowser = qFindChild<QTextBrowser *>(parent(), "licenseTextBrowser");
-	QSize licenseTextSize = licenseTextBrowser->document()->size().toSize();
-	licenseTextBrowser->setMinimumHeight(licenseTextSize.height());
+	foreach (QString objectName, QStringList() << "aboutTextBrowser" << "licenseTextBrowser"){
+		QTextBrowser *textBrowser = qFindChild<QTextBrowser *>(parent(), objectName);
+		QSize textSize = textBrowser->document()->size().toSize();
+		textBrowser->setMinimumHeight(textSize.height());
+	}
 }
 

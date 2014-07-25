@@ -113,8 +113,11 @@ void NPlaybackEngineGStreamer::setMedia(const QString &file)
 
 	stop();
 
-	if (file.isEmpty())
+	if (file.isEmpty()) {
+		m_currentMedia = "";
+		emit mediaChanged("");
 		return;
+	}
 
 	if (!QFile(file).exists()) {
 		emit message(QMessageBox::Warning, file, "No such file or directory");
@@ -275,7 +278,7 @@ void NPlaybackEngineGStreamer::checkStatus()
 #endif
 
 	qreal vol = volume();
-	if (m_oldVolume != vol) {
+	if (qAbs(m_oldVolume - vol) > 0.0001) {
 		m_oldVolume = vol;
 		emit volumeChanged(vol);
 	}

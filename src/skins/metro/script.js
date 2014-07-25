@@ -12,176 +12,186 @@
 **
 *********************************************************************/
 
-function Program(player)
+function Main()
 {
 	try {
-		this.player = player;
-		this.mainWindow = player.mainWindow();
-		this.playbackEngine = player.playbackEngine();
-		this.playlistWidget = this.mainWindow.findChild("playlistWidget");
-		this.dropArea = this.mainWindow.findChild("dropArea");
-		this.playButton = this.mainWindow.findChild("playButton");
-		this.stopButton = this.mainWindow.findChild("stopButton");
-		this.prevButton = this.mainWindow.findChild("prevButton");
-		this.nextButton = this.mainWindow.findChild("nextButton");
-		this.volumeSlider = this.mainWindow.findChild("volumeSlider");
-		this.waveformSlider = this.mainWindow.findChild("waveformSlider");
-		this.sizeGrip = this.mainWindow.findChild("sizeGrip");
-		this.closeButton = this.mainWindow.findChild("closeButton");
-		this.minimizeButton = this.mainWindow.findChild("minimizeButton");
-		this.titleLabel = this.mainWindow.findChild("titleLabel");
-		this.coverWidget = this.mainWindow.findChild("coverWidget");
+		Ui.repeatCheckBox["clicked(bool)"].connect(Ui.playlistWidget["setRepeatMode(bool)"]);
+		Ui.playlistWidget["repeatModeChanged(bool)"].connect(Ui.repeatCheckBox["setChecked(bool)"]);
+		Ui.repeatCheckBox.setChecked(Ui.playlistWidget.repeatMode());
 
-		this.repeatCheckBox = this.mainWindow.findChild("repeatCheckBox");
-		this.repeatCheckBox["clicked(bool)"].connect(this.playlistWidget["setRepeatMode(bool)"]);
-		this.playlistWidget["repeatModeChanged(bool)"].connect(this.repeatCheckBox["setChecked(bool)"]);
-		this.repeatCheckBox.setChecked(this.playlistWidget.repeatMode());
+		Ui.shuffleCheckBox["clicked(bool)"].connect(Ui.playlistWidget["setShuffleMode(bool)"]);
+		Ui.playlistWidget["shuffleModeChanged(bool)"].connect(Ui.shuffleCheckBox["setChecked(bool)"]);
 
-		this.shuffleCheckBox = this.mainWindow.findChild("shuffleCheckBox");
-		this.shuffleCheckBox["clicked(bool)"].connect(this.playlistWidget["setShuffleMode(bool)"]);
-		this.playlistWidget["shuffleModeChanged(bool)"].connect(this.shuffleCheckBox["setChecked(bool)"]);
+		Ui.playButton.clicked.connect(this, "on_playButton_clicked");
+		Ui.stopButton.clicked.connect(PlaybackEngine.stop);
+		Ui.prevButton.clicked.connect(Ui.playlistWidget.playPreviousRow);
 
-		this.playButton.clicked.connect(this, "on_playButton_clicked");
-		this.stopButton.clicked.connect(this.playbackEngine.stop);
-		this.prevButton.clicked.connect(this.playlistWidget.playPreviousRow);
+		Ui.titleWidget.enableDoubleClick();
+		Ui.titleWidget.doubleClicked.connect(Ui.mainWindow.toggleMaximize);
 
-		this.titleWidget = this.mainWindow.findChild("titleWidget");
-		this.titleWidget.enableDoubleClick();
-		this.titleWidget.doubleClicked.connect(this.mainWindow.toggleMaximize);
+		Ui.nextButton.clicked.connect(Ui.playlistWidget.playNextRow);
 
-		this.nextButton.clicked.connect(this.playlistWidget.playNextRow);
+		Ui.volumeSlider.minimum = 0;
+		Ui.volumeSlider.maximum = 100;
 
-		this.volumeSlider.minimum = 0;
-		this.volumeSlider.maximum = 100;
+		Ui.waveformSlider.minimum = 0;
+		Ui.waveformSlider.maximum = 10000;
 
-		this.waveformSlider.minimum = 0;
-		this.waveformSlider.maximum = 10000;
+		PlaybackEngine["stateChanged(N::PlaybackState)"].connect(this, "on_stateChanged");
+		PlaybackEngine["mediaChanged(const QString &)"].connect(Ui.waveformSlider["drawFile(const QString &)"]);
+		PlaybackEngine["mediaChanged(const QString &)"].connect(Ui.coverWidget["setSource(const QString &)"]);
+		PlaybackEngine["finished()"].connect(Ui.playlistWidget.currentFinished);
+		PlaybackEngine["failed()"].connect(this, "on_failed");
+		Ui.playlistWidget["mediaSet(const QString &)"].connect(PlaybackEngine["setMedia(const QString &)"]);
+		Ui.playlistWidget["currentActivated()"].connect(PlaybackEngine.play);
 
-		this.playbackEngine["stateChanged(N::PlaybackState)"].connect(this, "on_stateChanged");
-		this.playbackEngine["mediaChanged(const QString &)"].connect(this.waveformSlider["drawFile(const QString &)"]);
-		this.playbackEngine["mediaChanged(const QString &)"].connect(this.coverWidget["setSource(const QString &)"]);
-		this.playbackEngine["finished()"].connect(this.playlistWidget.currentFinished);
-		this.playbackEngine["failed()"].connect(this, "on_failed");
-		this.playlistWidget["mediaSet(const QString &)"].connect(this.playbackEngine["setMedia(const QString &)"]);
-		this.playlistWidget["currentActivated()"].connect(this.playbackEngine.play);
+		Ui.volumeSlider["sliderMoved(qreal)"].connect(PlaybackEngine["setVolume(qreal)"]);
+		PlaybackEngine["volumeChanged(qreal)"].connect(Ui.volumeSlider["setValue(qreal)"]);
 
-		this.volumeSlider["sliderMoved(int)"].connect(this, "on_volumeSlider_sliderMoved");
-		this.playbackEngine["volumeChanged(qreal)"].connect(this, "volumeSlider_setValue");
+		Ui.waveformSlider["sliderMoved(qreal)"].connect(PlaybackEngine["setPosition(qreal)"]);
+		PlaybackEngine["positionChanged(qreal)"].connect(Ui.waveformSlider["setValue(qreal)"]);
 
-		this.waveformSlider["sliderMoved(int)"].connect(this, "on_waveformSlider_sliderMoved");
-		this.playbackEngine["positionChanged(qreal)"].connect(this, "waveformSlider_setValue");
+		Ui.dropArea["filesDropped(const QStringList &)"].connect(Ui.playlistWidget["playFiles(const QStringList &)"]);
+		Ui.mainWindow.windowFlags = (Ui.mainWindow.windowFlags | Qt.FramelessWindowHint | Qt.WindowCloseButtonHint) ^ (Qt.WindowTitleHint | Qt.Dialog);
 
-		this.dropArea["filesDropped(const QStringList &)"].connect(this.playlistWidget["playFiles(const QStringList &)"]);
-		this.mainWindow.windowFlags = (this.mainWindow.windowFlags | Qt.FramelessWindowHint | Qt.WindowCloseButtonHint) ^ (Qt.WindowTitleHint | Qt.Dialog);
+		Ui.closeButton.clicked.connect(Ui.mainWindow.close);
+		Ui.minimizeButton.clicked.connect(Ui.mainWindow.showMinimized);
 
-		this.closeButton.clicked.connect(this.mainWindow.close);
-		this.minimizeButton.clicked.connect(this.mainWindow.showMinimized);
+		Ui.mainWindow["newTitle(const QString &)"].connect(this, "setTitle");
+		Ui.mainWindow["fullScreenEnabled(bool)"].connect(this, "on_fullScreenEnabled");
+		Ui.mainWindow["maximizeEnabled(bool)"].connect(this, "on_maximizeEnabled");
+		Ui.mainWindow.resized.connect(this, "on_resized");
 
-		this.mainWindow["newTitle(const QString &)"].connect(this, "setTitle");
-		this.mainWindow.resized.connect(this, "on_resized");
-
-		this.splitter = this.mainWindow.findChild("splitter");
-		this.splitter["splitterMoved(int, int)"].connect(this, "on_splitterMoved");
+		Ui.splitter["splitterMoved(int, int)"].connect(this, "on_splitterMoved");
 
 		if (Q_WS == "mac") {
-			this.mainWindow.setAttribute(Qt.WA_MacBrushedMetal, true);
-
-			var playlistWidget = this.mainWindow.findChild("playlistWidget");
-			playlistWidget.setAttribute(Qt.WA_MacShowFocusRect, false);
-
-			var borderWidget = this.mainWindow.findChild("borderWidget");
-
-			var titleLabel = this.mainWindow.findChild("titleLabel");
-			titleLabel.setFontSize(12);
-
-			this.sizeGrip.setParent(borderWidget);
+			Ui.mainWindow.setAttribute(Qt.WA_MacBrushedMetal, true);
+			Ui.playlistWidget.setAttribute(Qt.WA_MacShowFocusRect, false);
+			Ui.titleLabel.setFontSize(12);
+			Ui.sizeGrip.setParent(Ui.borderWidget);
 		} else {
-			this.sizeGrip.hide();
-			this.mainWindow.setSizeGripEnabled(true);
+			Ui.sizeGrip.hide();
+			Ui.mainWindow.setSizeGripEnabled(true);
 		}
 
-		/*if (Q_WS == "win")
-			this.mainWindow.setFramelessShadow(true);*/
-
-		if (WS_BUTTOS_SIDE == "left") {
-			var titleBarlLayout = this.mainWindow.findChild("titleBarlLayout");
-			titleBarlLayout.insertWidget(0, this.closeButton);
-			titleBarlLayout.insertWidget(1, this.minimizeButton);
-			titleBarlLayout.insertWidget(5, this.mainWindow.findChild("iconLabel"));
+		if (WS_WM_BUTTON_DIRECTION == "left") {
+			Ui.titleWidget.layout().insertWidget(0, Ui.minimizeButton);
+			Ui.titleWidget.layout().insertWidget(0, Ui.closeButton);
+			Ui.titleWidget.layout().insertWidget(10, Ui.themeButton);
+			Ui.titleWidget.layout().insertWidget(10, Ui.iconLabel);
 		}
 	} catch (err) {
 		print("QtScript: " + err);
 	}
 }
 
-Program.prototype.afterShow = function()
+Main.prototype.afterShow = function()
 {
-	if (this.player.settings().value("MetroSkin/Splitter"))
-		this.splitter.setSizes(this.player.settings().value("MetroSkin/Splitter"));
+	if (Settings.value("MetroSkin/Splitter"))
+		Ui.splitter.setSizes(Settings.value("MetroSkin/Splitter"));
+
+	this.darkTheme = Ui.mainWindow.styleSheet;
+	this.lightTheme = readFile("light.css");
+
+	maskImage("shuffle.png", "#000000", 0.4);
+	maskImage("repeat.png",  "#000000", 0.4);
+
+	Ui.themeButton["clicked(bool)"].connect(this, "loadTheme");
+	Ui.themeButton.checked = (Settings.value("MetroSkin/LightTheme") == "true");
+	this.loadTheme(Ui.themeButton.checked);
 }
 
-Program.prototype.on_playButton_clicked = function()
+Main.prototype.loadTheme = function(useLightTheme)
 {
-	if (!this.playlistWidget.hasCurrent())
-		this.playlistWidget.playRow(0);
+	if (useLightTheme == true) {
+		var styleSheet = this.darkTheme + this.lightTheme
+		var color = "#3D3D3D";
+	} else {
+		var styleSheet = this.darkTheme;
+		var color = "#FFFFFF";
+	}
+
+	maskImage("prev.png", color);
+	maskImage("stop.png", color);
+	maskImage("play.png", color);
+	maskImage("pause.png", color);
+	maskImage("next.png", color);
+	maskImage("close.png", color);
+	maskImage("minimize.png", color);
+	maskImage("shuffle.png", color);
+	maskImage("repeat.png",  color);
+	maskImage("icon.png",  color);
+	maskImage("theme.png",  color);
+
+	Ui.mainWindow.styleSheet = styleSheet;
+	Ui.playButton.styleSheet = Ui.playButton.styleSheet;
+
+	Settings.setValue("MetroSkin/LightTheme", useLightTheme);
+}
+
+Main.prototype.on_playButton_clicked = function()
+{
+	if (!Ui.playlistWidget.hasCurrent())
+		Ui.playlistWidget.playRow(0);
 	else
-		this.playbackEngine.play(); // toggle play/pause
+		PlaybackEngine.play(); // toggle play/pause
 }
 
-Program.prototype.on_stateChanged = function(state)
+Main.prototype.on_stateChanged = function(state)
 {
 	if (state == N.PlaybackPlaying)
-		this.playButton.styleSheet = "qproperty-icon: url(pause.png)";
+		Ui.playButton.styleSheet = "qproperty-icon: url(pause.png)";
 	else
-		this.playButton.styleSheet = "qproperty-icon: url(play.png)";
+		Ui.playButton.styleSheet = "qproperty-icon: url(play.png)";
 
-	this.waveformSlider.setPausedState(state == N.PlaybackPaused);
+	Ui.waveformSlider.setPausedState(state == N.PlaybackPaused);
 }
 
-Program.prototype.on_failed = function()
+Main.prototype.on_failed = function()
 {
-	this.playlistWidget.currentFailed();
-	this.playlistWidget.playNextRow();
+	Ui.playlistWidget.currentFailed();
+	Ui.playlistWidget.playNextRow();
 }
 
-Program.prototype.on_resized = function()
+Main.prototype.on_resized = function()
 {
 	if (Q_WS == "mac") {
-		this.sizeGrip.move(this.sizeGrip.parentWidget().width -
-		                   this.sizeGrip.width - 5,
-		                   this.sizeGrip.parentWidget().height -
-		                   this.sizeGrip.height - 4);
+		Ui.sizeGrip.move(Ui.sizeGrip.parentWidget().width -
+		                 Ui.sizeGrip.width - 5,
+		                 Ui.sizeGrip.parentWidget().height -
+		                 Ui.sizeGrip.height - 4);
 	}
 }
 
-Program.prototype.on_volumeSlider_sliderMoved = function(value)
+Main.prototype.on_splitterMoved = function(pos, index)
 {
-	this.playbackEngine.setVolume(value / this.volumeSlider.maximum);
+	Settings.setValue("MetroSkin/Splitter", Ui.splitter.sizes());
 }
 
-Program.prototype.volumeSlider_setValue = function(value)
+Main.prototype.setTitle = function(title)
 {
-	this.volumeSlider.value = Math.round(value * this.volumeSlider.maximum);
+	Ui.titleLabel.text = title;
+	Ui.titleLabel.toolTip = title;
 }
 
-Program.prototype.on_splitterMoved = function(pos, index)
+Main.prototype.on_fullScreenEnabled = function(enabled)
 {
-	this.player.settings().setValue("MetroSkin/Splitter", this.splitter.sizes());
+	Ui.controlsContainer.setVisible(!enabled);
+	Ui.titleWidget.setVisible(!enabled);
+	Ui.playlistWidget.setVisible(!enabled);
+
+	this.setBorderVisible(!enabled);
 }
 
-Program.prototype.on_waveformSlider_sliderMoved = function(value)
+Main.prototype.on_maximizeEnabled = function(enabled)
 {
-	this.playbackEngine.setPosition(value / this.waveformSlider.maximum);
+	this.setBorderVisible(!enabled);
 }
 
-Program.prototype.waveformSlider_setValue = function(value)
+Main.prototype.setBorderVisible = function(enabled)
 {
-	this.waveformSlider.value = Math.round(value * this.waveformSlider.maximum);
+	if (enabled)
+		Ui.borderWidget.layout().setContentsMargins(1, 1, 1, 1);
+	else
+		Ui.borderWidget.layout().setContentsMargins(0, 0, 0, 0);
 }
-
-Program.prototype.setTitle = function(title)
-{
-	this.titleLabel.text = title;
-	this.titleLabel.toolTip = title;
-}
-
