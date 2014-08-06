@@ -30,17 +30,13 @@ private:
 	Ui::Dialog ui;
 #endif
 	bool m_dragActive;
-	bool m_skinEnabled;
 	QPoint m_dragPoint;
-	QString m_styleSheet;
-	QPoint m_oldPos;
-	QSize m_oldSize;
-	QWidget *m_waveformSlider;
+	QPoint m_unmaximizedPos;
+	QSize m_unmaximizedSize;
+	bool m_isFullScreen;
 
 	void changeEvent(QEvent *event);
 	bool eventFilter(QObject *obj, QEvent *event);
-	void showEvent(QShowEvent *event);
-	void hideEvent(QHideEvent *event);
 	void closeEvent(QCloseEvent *event);
 	void mousePressEvent(QMouseEvent *event);
 	void mouseMoveEvent(QMouseEvent *event);
@@ -61,16 +57,14 @@ public:
 #endif
 
 public slots:
-	void setTitle(QString title);
-	void toggleMaximize();
-	void toggleVisibility();
-	void showNormal();
-	void showFullScreen();
-	void setOnTop(bool onTop);
-
-private slots:
 	void loadSettings();
 	void saveSettings();
+	void show();
+	void toggleMaximize();
+	void toggleFullScreen();
+	void setTitle(QString title);
+	void setOnTop(bool onTop);
+	void reject() {};
 
 signals:
 	void closed();

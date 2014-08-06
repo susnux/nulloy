@@ -23,45 +23,50 @@
 #include <QDebug>
 #include <QTranslator>
 
+static const char _i18nDirName[] = "i18n";
+
 namespace NI18NLoader
 {
-	bool __init = FALSE;
+	bool _init = FALSE;
 	QMap<QLocale::Language, QString> _translations;
 	QTranslator _translator;
-	void _init();
 }
 
-void NI18NLoader::_init()
+void NI18NLoader::init()
 {
-	if (__init)
+	if (_init)
 		return;
-	__init = TRUE;
+	_init = TRUE;
 
 	_translations[QLocale::English] = "";
 
+	// find directories
 	QStringList langDirList;
-	langDirList << QCoreApplication::applicationDirPath() + "/i18n";
+	langDirList << QCoreApplication::applicationDirPath() + "/" + _i18nDirName;
 #ifndef Q_WS_WIN
 	if (NCore::rcDir() != QCoreApplication::applicationDirPath())
-		langDirList << NCore::rcDir() + "/i18n";
+		langDirList << NCore::rcDir() + "/" + _i18nDirName;
 	if (QDir(QCoreApplication::applicationDirPath()).dirName() == "bin") {
 		QDir dir(QCoreApplication::applicationDirPath());
-		dir.cd("../share/nulloy/i18n");
+		dir.cd(QString() + "../share/nulloy/" + _i18nDirName);
 		langDirList << dir.absolutePath();
 	}
 #endif
 
+	// populate .qm files
 	foreach (QString dirStr, langDirList) {
 		QDir dir(dirStr);
 		if (!dir.exists())
 			continue;
-		foreach (QString fileName, dir.entryList(QStringList("*.qm"), QDir::Files)) {
+		QStringList fileNames = dir.entryList(QStringList("*.qm"), QDir::Files);
+		foreach (QString fileName, fileNames) {
 			QFileInfo fileInfo(fileName);
 			QLocale locale(fileInfo.baseName());
 			_translations[locale.language()] = dir.absoluteFilePath(fileName);
 		}
 	}
 
+	// detect system locale and save to settings
 	QString settingsLanguageTag = NSettings::instance()->value("Language", "").toString();
 	QLocale locale = QLocale(settingsLanguageTag);
 	if (settingsLanguageTag.isEmpty())
@@ -69,30 +74,32 @@ void NI18NLoader::_init()
 	if (!_translations.contains(locale.language()))
 		locale = QLocale(QLocale::English);
 	NSettings::instance()->setValue("Language", locale.bcp47Name().split('-').first());
+
+	// load translation
+	if (locale.language() != QLocale::English) {
+		QFileInfo fileInfo(_translations[locale.language()]);
+		_translator.load(fileInfo.baseName(), fileInfo.absolutePath());
+		QCoreApplication::instance()->installTranslator(&_translator);
+	}
 }
 
 QList<QLocale::Language> NI18NLoader::translations()
 {
-	_init();
+	init();
 	return _translations.keys();
 }
 
-void NI18NLoader::loadTranslation(QLocale::Language language)
+QString NI18NLoader::translate(QLocale::Language language, const char *context, const char *sourceText)
 {
-	_init();
+	init();
 
-	if (language == QLocale::AnyLanguage) {
-		QString settingsLanguageTag = NSettings::instance()->value("Language", "").toString();
-		QLocale locale = QLocale(settingsLanguageTag);
-		language = locale.language();
-	}
+	if (language == QLocale::English || !_translations.contains(language))
+		return sourceText;
 
-	if (language != QLocale::English) {
-		QFileInfo fileInfo(_translations[language]);
-		_translator.load(fileInfo.baseName(), fileInfo.absolutePath());
-		QCoreApplication::instance()->installTranslator(&_translator);
-	} else {
-		QCoreApplication::instance()->removeTranslator(&_translator);
-	}
+	QFileInfo fileInfo(_translations[language]);
+	QTranslator translator;
+	translator.load(fileInfo.baseName(), fileInfo.absolutePath());
+	QCoreApplication::instance()->installTranslator(&translator);
+	return QCoreApplication::translate(context, sourceText);
 }
 

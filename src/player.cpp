@@ -24,6 +24,7 @@
 #include "playbackEngineInterface.h"
 #include "playlistWidget.h"
 #include "playlistWidgetItem.h"
+#include "pluginLoader.h"
 #include "preferencesDialog.h"
 #include "scriptEngine.h"
 #include "settings.h"
@@ -34,12 +35,6 @@
 #ifndef _N_NO_SKINS_
 #include "skinLoader.h"
 #include "skinFileSystem.h"
-#endif
-
-#ifndef _N_NO_PLUGINS_
-#include "pluginLoader.h"
-#else
-#include "playbackEngineGstreamer.h"
 #endif
 
 #ifdef Q_WS_WIN
@@ -61,15 +56,10 @@ NPlayer::NPlayer()
 	qsrand((uint)QTime::currentTime().msec());
 	m_settings = NSettings::instance();
 
-	NI18NLoader::loadTranslation();
+	NI18NLoader::init();
 
 	// construct playbackEngine >>
-#ifndef _N_NO_PLUGINS_
 	m_playbackEngine = dynamic_cast<NPlaybackEngineInterface *>(NPluginLoader::getPlugin(N::PlaybackEngine));
-#else
-	m_playbackEngine = dynamic_cast<NPlaybackEngineInterface *>(new NPlaybackEngineGStreamer());
-	dynamic_cast<NPlugin *>(m_playbackEngine)->init();
-#endif
 	m_playbackEngine->setParent(this);
 	connect(m_playbackEngine, SIGNAL(mediaChanged(const QString &)), this, SLOT(on_playbackEngine_mediaChanged(const QString &)));
 	connect(m_playbackEngine, SIGNAL(stateChanged(N::PlaybackState)), this, SLOT(on_playbackEngine_stateChanged(N::PlaybackState)));
@@ -156,25 +146,26 @@ NPlayer::NPlayer()
 	NAction *preferencesAction = new NAction(QIcon::fromTheme("preferences-desktop",
 	                                         style()->standardIcon(QStyle::SP_MessageBoxInformation)),
 	                                         tr("Preferences..."), this);
-	preferencesAction->setShortcuts(QKeySequence::Preferences);
+	preferencesAction->setShortcut(QKeySequence("Ctrl+P"));
 	connect(preferencesAction, SIGNAL(triggered()), m_preferencesDialog, SLOT(exec()));
 
 	NAction *exitAction = new NAction(QIcon::fromTheme("exit",
 	                                  style()->standardIcon(QStyle::SP_DialogCloseButton)),
 	                                  tr("Exit"), this);
-	exitAction->setShortcuts(QKeySequence::Quit);
+	exitAction->setShortcut(QKeySequence("Ctrl+Q"));
 	connect(exitAction, SIGNAL(triggered()), this, SLOT(quit()));
 
 	NAction *openFileDialogAction = new NAction(style()->standardIcon(QStyle::SP_DialogOpenButton), tr("Add Files..."), this);
-	openFileDialogAction->setShortcuts(QKeySequence::Open);
+	openFileDialogAction->setShortcut(QKeySequence("Ctrl+O"));
 	connect(openFileDialogAction, SIGNAL(triggered()), this, SLOT(showOpenFileDialog()));
 	connect(m_playlistWidget, SIGNAL(activateEmptyFail()), openFileDialogAction, SLOT(trigger()));
 
 	NAction *openDirDialogAction = new NAction(style()->standardIcon(QStyle::SP_FileDialogNewFolder), tr("Add Directory..."), this);
+	openDirDialogAction->setShortcut(QKeySequence("Ctrl+Shift+O"));
 	connect(openDirDialogAction, SIGNAL(triggered()), this, SLOT(showOpenDirDialog()));
 
 	NAction *savePlaylistDialogAction = new NAction(style()->standardIcon(QStyle::SP_DialogSaveButton), tr("Save Playlist..."), this);
-	savePlaylistDialogAction->setShortcuts(QKeySequence::Save);
+	savePlaylistDialogAction->setShortcut(QKeySequence("Ctrl+S"));
 	connect(savePlaylistDialogAction, SIGNAL(triggered()), this, SLOT(showSavePlaylistDialog()));
 
 	NAction *showCoverAction = new NAction(tr("Show Cover Art"), this);
@@ -200,10 +191,9 @@ NPlayer::NPlayer()
 
 	NAction *fullScreenAction = new NAction(tr("Fullscreen Mode"), this);
 	fullScreenAction->setStatusTip(tr("Hide all controll except waveform"));
-	fullScreenAction->setCheckable(TRUE);
 	fullScreenAction->setObjectName("fullScreenAction");
 	fullScreenAction->setCustomizable(TRUE);
-	connect(fullScreenAction, SIGNAL(toggled(bool)), this, SLOT(on_fullScreenAction_toggled(bool)));
+	connect(fullScreenAction, SIGNAL(triggered()), m_mainWindow, SLOT(toggleFullScreen()));
 	// << actions
 
 
@@ -244,6 +234,16 @@ NPlayer::NPlayer()
 	loadNextDateDownAction->setActionGroup(group);
 	loadNextDateUpAction->setActionGroup(group);
 	// << playlist actions
+
+
+	// keyboard shortcuts >>
+	m_settings->initShortcuts(this);
+	m_settings->loadShortcuts();
+	foreach (NAction *action, findChildren<NAction *>()) {
+		if (!action->shortcuts().isEmpty())
+			m_mainWindow->addAction(action);
+	}
+	// << keyboard shortcuts
 
 
 	// tray icon >>
@@ -294,8 +294,7 @@ NPlayer::NPlayer()
 	playlistSubMenu->addAction(loadNextDateUpAction);
 	m_contextMenu->addMenu(playlistSubMenu);
 
-	if (NPluginLoader::getPlugin(N::CoverReader))
-		m_contextMenu->addAction(showCoverAction);
+	m_contextMenu->addAction(showCoverAction);
 	m_contextMenu->addAction(preferencesAction);
 	m_contextMenu->addSeparator();
 	m_contextMenu->addAction(aboutAction);
@@ -350,15 +349,11 @@ NPlayer::NPlayer()
 	connect(m_playbackEngine, SIGNAL(message(QMessageBox::Icon, const QString &, const QString &)),
 	        m_logDialog, SLOT(showMessage(QMessageBox::Icon, const QString &, const QString &)));
 
-	m_settings->initShortcuts(this);
-	m_settings->loadShortcuts();
-	foreach (NAction *action, m_settings->shortcuts())
-		m_mainWindow->addAction(action);
-
 	loadSettings();
 
 	m_mainWindow->setTitle(QCoreApplication::applicationName() + " " + QCoreApplication::applicationVersion());
 	m_mainWindow->show();
+	m_mainWindow->loadSettings();
 	QResizeEvent e(m_mainWindow->size(), m_mainWindow->size());
 	QCoreApplication::sendEvent(m_mainWindow, &e);
 
@@ -399,7 +394,7 @@ bool NPlayer::eventFilter(QObject *obj, QEvent *event)
 void NPlayer::readMessage(const QString &str)
 {
 	if (str.isEmpty()) {
-		m_mainWindow->showNormal();
+		m_mainWindow->show();
 		m_mainWindow->activateWindow();
 		m_mainWindow->raise();
 		return;
@@ -592,10 +587,11 @@ void NPlayer::on_trayIcon_activated(QSystemTrayIcon::ActivationReason reason)
 
 void NPlayer::toggleWindowVisibility()
 {
-	if (!m_mainWindow->isVisible() || !m_mainWindow->isActiveWindow()) {
-		m_mainWindow->showNormal();
+	if (!m_mainWindow->isVisible() || m_mainWindow->isMinimized()) {
+		m_mainWindow->show();
 		m_mainWindow->activateWindow();
 		m_mainWindow->raise();
+
 	} else if (m_settings->value("MinimizeToTray").toBool()) {
 		m_mainWindow->setVisible(FALSE);
 		m_systemTray->setVisible(TRUE);
@@ -607,7 +603,7 @@ void NPlayer::toggleWindowVisibility()
 void NPlayer::trayIconCountClicks(int clicks)
 {
 	if (clicks == 1) {
-		m_mainWindow->showNormal();
+		m_mainWindow->show();
 		m_mainWindow->activateWindow();
 		m_mainWindow->raise();
 	} else if (clicks == 2) {
@@ -619,7 +615,7 @@ void NPlayer::trayIconCountClicks(int clicks)
 
 void NPlayer::quit()
 {
-	m_mainWindow->close();
+	m_mainWindow->saveSettings();
 	saveDefaultPlaylist();
 	saveSettings();
 	QCoreApplication::quit();
@@ -671,15 +667,6 @@ void NPlayer::on_alwaysOnTopAction_toggled(bool checked)
 	bool whilePlaying = m_settings->value("WhilePlayingOnTop").toBool();
 	if (!whilePlaying || m_playbackEngine->state() != N::PlaybackPlaying)
 		m_mainWindow->setOnTop(checked);
-}
-
-void NPlayer::on_fullScreenAction_toggled(bool checked)
-{
-	if (checked) {
-		m_mainWindow->showFullScreen();
-	} else {
-		m_mainWindow->showNormal();
-	}
 }
 
 void NPlayer::on_whilePlayingOnTopAction_toggled(bool checked)

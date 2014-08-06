@@ -28,13 +28,11 @@
 #include <QMessageBox>
 #include <QPluginLoader>
 
-#ifdef _N_GSTREAMER_PLUGINS_BUILTIN_
-#include "playbackEngineGstreamer.h"
-#include "waveformBuilderGstreamer.h"
-#endif
-
 Q_DECLARE_METATYPE(NPlugin *)
 Q_DECLARE_METATYPE(QPluginLoader *)
+
+static const char _containerPrefer[] = "GStreamer";
+static const char _pluginsDirName[] = "plugins";
 
 namespace NPluginLoader
 {
@@ -42,7 +40,6 @@ namespace NPluginLoader
 	QList<Descriptor> _descriptors;
 	QMap<N::PluginType, NPlugin *> _usedPlugins;
 	QMap<QPluginLoader *, bool> _usedLoaders;
-	QString _containerPrefer = "GStreamer";
 
 	void _init();
 	NPlugin* _findPlugin(N::PluginType type);
@@ -103,51 +100,29 @@ void NPluginLoader::_init()
 		return;
 	__init = TRUE;
 
-#if 0
-	QMap<QString, bool> usedFlags;
-	QList<NPlugin *> plugins;
-	QList<NPlugin *> pluginsStatic;
-#ifdef _N_GSTREAMER_PLUGINS_BUILTIN_
-	pluginsStatic << new NPlaybackEngineGStreamer() << new NWaveformBuilderGstreamer();
-#endif
-	pluginsStatic << QPluginLoader::staticInstances();
-
-	foreach (NPlugin *plugin, pluginsStatic) {
-		if (plugin) {
-			plugins << plugin;
-			plugin->init();
-			QString id = plugin->identifier();
-			id.insert(id.lastIndexOf('/'), " (Built-in)");
-			_identifiers << id;
-			_loaders << NULL;
-			usedFlags << TRUE;
-		}
-	}
-#endif
-
 	QStringList pluginsDirList;
-	pluginsDirList << QCoreApplication::applicationDirPath() + "/plugins";
+	pluginsDirList << QCoreApplication::applicationDirPath() + "/" + _pluginsDirName;
 #ifndef Q_WS_WIN
 	if (NCore::rcDir() != QCoreApplication::applicationDirPath())
-		pluginsDirList << NCore::rcDir() + "/plugins";
+		pluginsDirList << NCore::rcDir() + "/" + _pluginsDirName;
 	if (QDir(QCoreApplication::applicationDirPath()).dirName() == "bin") {
 		QDir dir(QCoreApplication::applicationDirPath());
-		dir.cd("../lib/nulloy/plugins");
+		dir.cd(QString() + "../lib/nulloy/" + _pluginsDirName);
 		pluginsDirList << dir.absolutePath();
 	}
 #endif
 
 #ifdef Q_WS_WIN
-		QStringList subDirsList;
-		foreach (QString dirStr, pluginsDirList) {
-			QDir dir(dirStr);
-			if (dir.exists()) {
-				foreach (QString subDir, dir.entryList(QDir::Dirs))
-					subDirsList << dirStr + "/" + subDir;
-			}
+	QStringList subDirsList;
+	foreach (QString dirStr, pluginsDirList) {
+		QDir dir(dirStr);
+		if (dir.exists()) {
+			foreach (QString subDir, dir.entryList(QDir::Dirs))
+				subDirsList << dirStr + "/" + subDir;
 		}
-		_putenv(QString("PATH=" + pluginsDirList.join(";") + ";" +
-			subDirsList.join(";") + ";" + getenv("PATH")).replace('/', '\\').toUtf8());
+	}
+	_putenv(QString("PATH=" + pluginsDirList.join(";") + ";" +
+		subDirsList.join(";") + ";" + getenv("PATH")).replace('/', '\\').toUtf8());
 #endif
 	foreach (QString dirStr, pluginsDirList) {
 		QDir dir(dirStr);
