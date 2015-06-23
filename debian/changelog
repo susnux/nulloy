@@ -1,0 +1,6 @@
+nulloy (0.7.5-testing-1) precise; urgency=low
+
+  * Fixes against previous release
+  * Changelog diff at http://git.io/0jkuQQ
+
+ -- Sergey Vlasov <sergey@vlasov.me>  Tue, 15 Oct 2013 22:34:57 +0300
