@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -64,7 +64,7 @@ void enumFromScriptValue(const QScriptValue &value, T &en)
 	en = (T)value.toInt32();
 }
 
-QScriptValue readFile(QScriptContext *context, QScriptEngine *engine)
+QScriptValue readFile(QScriptContext *context, QScriptEngine *)
 {
 	if (context->argumentCount() != 1)
 		return QString();
@@ -72,11 +72,12 @@ QScriptValue readFile(QScriptContext *context, QScriptEngine *engine)
 	QString fileName = context->argument(0).toString();
 
 	QFile file(NSkinFileSystem::prefix() + fileName);
-	file.open(QFile::ReadOnly);
+	if (!file.open(QIODevice::ReadOnly))
+		return QString();
 	return QLatin1String(file.readAll());
 }
 
-QScriptValue maskImage(QScriptContext *context, QScriptEngine *engine)
+QScriptValue maskImage(QScriptContext *context, QScriptEngine *)
 {
 	if (context->argumentCount() < 2)
 		return QScriptValue();
@@ -117,6 +118,21 @@ QScriptValue maskImage(QScriptContext *context, QScriptEngine *engine)
 	return QScriptValue();
 }
 
+QScriptValue addApplicationFont(QScriptContext *context, QScriptEngine *)
+{
+	if (context->argumentCount() != 1)
+		return -1;
+
+	QString fileName = context->argument(0).toString();
+
+	QFile file(NSkinFileSystem::prefix() + fileName);
+	if (!file.open(QIODevice::ReadOnly))
+		return -1;
+	QByteArray byteArray = file.readAll();
+
+	return QFontDatabase::addApplicationFontFromData(byteArray);
+}
+
 NScriptEngine::NScriptEngine(NPlayer *player) : QScriptEngine(player)
 {
 	QScriptValue global = globalObject();
@@ -140,12 +156,21 @@ NScriptEngine::NScriptEngine(NPlayer *player) : QScriptEngine(player)
 	if (ws == "mac") {
 		direction = "left";
 	} else if (ws == "x11") {
-		QProcess gconftool;
-		gconftool.start("gconftool-2 --get \"/apps/metacity/general/button_layout\"");
-		gconftool.waitForStarted();
-		gconftool.waitForFinished();
-		if (gconftool.readAll().endsWith(":\n"))
-			direction = "left";
+		if (system("pidof marco >/dev/null") == 0) {
+			QProcess dconf;
+			dconf.start("dconf read \"/org/mate/marco/general/button-layout\"");
+			dconf.waitForStarted();
+			dconf.waitForFinished();
+			if (dconf.readAll().endsWith(":'\n"))
+				direction = "left";
+		} else if (system("pidof metacity >/dev/null") == 0) {
+			QProcess gconftool;
+			gconftool.start("gconftool-2 --get \"/apps/metacity/general/button_layout\"");
+			gconftool.waitForStarted();
+			gconftool.waitForFinished();
+			if (gconftool.readAll().endsWith(":\n"))
+				direction = "left";
+		}
 	}
 	global.setProperty("WS_WM_BUTTON_DIRECTION", direction);
 
@@ -176,5 +201,6 @@ NScriptEngine::NScriptEngine(NPlayer *player) : QScriptEngine(player)
 
 	globalObject().setProperty("readFile", newFunction(readFile));
 	globalObject().setProperty("maskImage", newFunction(maskImage));
+	globalObject().setProperty("addApplicationFont", newFunction(addApplicationFont));
 }
 

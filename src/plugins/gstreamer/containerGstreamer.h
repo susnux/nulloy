@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -31,7 +31,7 @@ public:
 	~NContainerGstreamer();
 	QList<NPlugin *> plugins();
 	QString name() { return "GStreamer"; }
-	QString version() { return "0.7"; }
+	QString version() { return "0.8"; }
 };
 
 #endif

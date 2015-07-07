@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -23,9 +23,8 @@
 NContainerGstreamer::NContainerGstreamer(QObject *parent) : QObject(parent)
 {
 #ifdef Q_WS_WIN
-	_putenv(QString("GST_PLUGIN_PATH=" + QCoreApplication::applicationDirPath() + "/Plugins/GStreamer"         + ";" + getenv("GST_PLUGIN_PATH")).replace('/', '\\').toUtf8());
-#elif defined Q_WS_MAC
-	putenv( QString("GST_PLUGIN_PATH=" + QCoreApplication::applicationDirPath() + "/plugins/GStreamer/plugins" + ":" + getenv("GST_PLUGIN_PATH")).toUtf8().data());
+	_putenv(QString("GST_REGISTRY=NUL").toUtf8());
+	_putenv(QString("GST_REGISTRY_UPDATE=no").toUtf8());
 #endif
 
 	m_plugins << new NPlaybackEngineGStreamer()

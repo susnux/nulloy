@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -18,8 +18,8 @@
 #include "tagReaderInterface.h"
 #include "settings.h"
 #include "pluginLoader.h"
+#include "label.h"
 
-#include <QLabel>
 #include <QLayout>
 #include <QTime>
 #include <QToolTip>
@@ -29,13 +29,18 @@
 
 NTrackInfoWidget::~NTrackInfoWidget() {}
 
-NTrackInfoWidget::NTrackInfoWidget(QWidget *parent) : QWidget(parent)
+NTrackInfoWidget::NTrackInfoWidget(QFrame *parent) : QFrame(parent)
 {
 	QStringList vNames = QStringList() << "Top" << "Middle" << "Bottom";
 	QStringList hNames = QStringList() << "Left" << "Center" << "Right";
 	QVBoxLayout *vLayout = new QVBoxLayout;
 	for (int i = 0; i < vNames.count(); ++i) {
+		QWidget *hContainer = new QWidget;
+		hContainer->setAttribute(Qt::WA_TransparentForMouseEvents);
 		QHBoxLayout *hLayout = new QHBoxLayout;
+		hLayout->setContentsMargins(0, 0, 0, 0);
+		hLayout->setSpacing(0);
+		hContainer->setLayout(hLayout);
 		if (i > 0) {
 			QSpacerItem *vSpacer = new QSpacerItem(20, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
 			vLayout->addItem(vSpacer);
@@ -45,31 +50,43 @@ NTrackInfoWidget::NTrackInfoWidget(QWidget *parent) : QWidget(parent)
 				QSpacerItem *hSpacer = new QSpacerItem(40, 14, QSizePolicy::Expanding, QSizePolicy::Minimum);
 				hLayout->addItem(hSpacer);
 			}
-			QLabel *label = new QLabel;
+			NLabel *label = new NLabel;
+			label->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Preferred);
 			label->setObjectName(vNames.at(i) + hNames.at(j));
+			label->setAlignment(Qt::AlignHCenter);
 			hLayout->addWidget(label);
 		}
-		vLayout->addLayout(hLayout);
+		vLayout->addWidget(hContainer);
 	}
-	setLayout(vLayout);
-	vLayout->setContentsMargins(2, 2, 2, 2);
+	vLayout->setContentsMargins(0, 0, 0, 0);
+	vLayout->setSpacing(0);
 
-	setMouseTracking(TRUE);
-	QList<QLabel *> labels = findChildren<QLabel *>();
-	foreach (QLabel *label, labels)
-		label->setAttribute(Qt::WA_TransparentForMouseEvents);
+	setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+	QHBoxLayout *layout = new QHBoxLayout;
+	layout->setContentsMargins(0, 0, 0, 0);
+	setLayout(layout);
+	m_container = new QWidget;
+	m_container->setAttribute(Qt::WA_TransparentForMouseEvents);
+	m_container->setLayout(vLayout);
+	layout->addWidget(m_container);
 
 	m_effect = new QGraphicsOpacityEffect(this);
 	m_effect->setOpacity(1.0);
 	setGraphicsEffect(m_effect);
 
 	m_animation = new QPropertyAnimation(m_effect, "opacity", this);
-	m_animation->setDuration(100);
+	m_animation->setDuration(150);
 	m_animation->setEasingCurve(QEasingCurve::OutQuad);
 	m_animation->setStartValue(1.0);
 	m_animation->setEndValue(0.0);
 
+	setMouseTracking(true);
+	QList<NLabel *> labels = findChildren<NLabel *>();
+	foreach (NLabel *label, labels)
+		label->setAttribute(Qt::WA_TransparentForMouseEvents);
+
 	m_msec = 0;
+	m_heightThreshold = minimumSizeHint().height();
 
 	readSettings();
 	updateInfo();
@@ -77,16 +94,33 @@ NTrackInfoWidget::NTrackInfoWidget(QWidget *parent) : QWidget(parent)
 
 void NTrackInfoWidget::enterEvent(QEvent *)
 {
+#ifndef Q_WS_MAC // QTBUG-15367
 	m_animation->setDirection(QAbstractAnimation::Forward);
 	if (m_animation->state() == QAbstractAnimation::Stopped)
 		m_animation->start();
+#else
+	m_container->hide();
+#endif
 }
 
 void NTrackInfoWidget::leaveEvent(QEvent *)
 {
+	m_container->show();
 	m_animation->setDirection(QAbstractAnimation::Backward);
 	if (m_animation->state() == QAbstractAnimation::Stopped)
 		m_animation->start();
+}
+
+void NTrackInfoWidget::resizeEvent(QResizeEvent *event)
+{
+	QFrame::resizeEvent(event);
+	bool toShrink = (m_heightThreshold > height());
+	QVBoxLayout *vLayout = dynamic_cast<QVBoxLayout *>(m_container->layout());
+
+	vLayout->itemAt(0)->widget()->setHidden(toShrink); // top
+	vLayout->itemAt(4)->widget()->setHidden(toShrink); // bottom
+
+	QFrame::resizeEvent(event);
 }
 
 bool NTrackInfoWidget::event(QEvent *event)
@@ -94,7 +128,7 @@ bool NTrackInfoWidget::event(QEvent *event)
 	if (event->type() == QEvent::ToolTip)
 		QToolTip::hideText();
 
-	return QWidget::event(event);
+	return QFrame::event(event);
 }
 
 void NTrackInfoWidget::mouseMoveEvent(QMouseEvent *event)
@@ -109,7 +143,7 @@ void NTrackInfoWidget::updateInfo()
 		hide();
 	} else {
 		show();
-		foreach (QLabel *label, m_map.keys()) {
+		foreach (NLabel *label, m_map.keys()) {
 			QString info = tagReader->toString(m_map[label]);
 			if (!info.isEmpty()) {
 				label->setText(info);
@@ -123,7 +157,7 @@ void NTrackInfoWidget::updateInfo()
 
 void NTrackInfoWidget::readSettings()
 {
-	QList<QLabel *> labels = findChildren<QLabel *>();
+	QList<NLabel *> labels = findChildren<NLabel *>();
 	for (int i = 0; i < labels.size(); ++i) {
 		QString format = NSettings::instance()->value("TrackInfo/" + labels.at(i)->objectName()).toString();
 		if (!format.isEmpty()) {
@@ -149,7 +183,7 @@ void NTrackInfoWidget::tick(qint64 msec)
 	int hours = total / 60 / 60;
 	QTime current = QTime().addMSecs(msec);
 	QTime remaining = QTime().addMSecs(total * 1000 - msec);
-	foreach (QLabel *label, m_mapTick.keys()) {
+	foreach (NLabel *label, m_mapTick.keys()) {
 		QString text = m_mapTick[label];
 		if (hours > 0) {
 			text.replace("%T", current.toString("h:mm:ss"));

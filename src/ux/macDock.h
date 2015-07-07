@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -13,34 +13,29 @@
 **
 *********************************************************************/
 
-#ifndef N_DROP_AREA_H
-#define N_DROP_AREA_H
+#ifndef N_MAC_DOCK_H
+#define N_MAC_DOCK_H
 
-#include <QWidget>
+#include <QObject>
 
-class QStringList;
-class QDragEnterEvent;
-class QDragMoveEvent;
-class QDragLeaveEvent;
-class QDropEvent;
-
-class NDropArea : public QWidget
+class NMacDock : public QObject
 {
 	Q_OBJECT
 
-public:
-	NDropArea(QWidget *parent = 0, Qt::WindowFlags f = 0);
+private:
+	NMacDock() {}
+	~NMacDock() {}
+	NMacDock(NMacDock const &copy);
+	NMacDock operator=(NMacDock const &copy);
 
-protected:
-	QStringList mimeTypes() const;
-	virtual void dragEnterEvent(QDragEnterEvent *event);
-	virtual void dragMoveEvent(QDragMoveEvent *event);
-	virtual void dragLeaveEvent(QDragLeaveEvent *event);
-	virtual void dropEvent(QDropEvent *event);
+public:
+	static NMacDock* instance();
+	void registerClickHandler();
+
+	void _emitClicked();
 
 signals:
-	void filesDropped(const QStringList &file);
+	void clicked();
 };
 
 #endif
-

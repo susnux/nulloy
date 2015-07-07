@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -27,7 +27,7 @@ static const char _i18nDirName[] = "i18n";
 
 namespace NI18NLoader
 {
-	bool _init = FALSE;
+	bool _init = false;
 	QMap<QLocale::Language, QString> _translations;
 	QTranslator _translator;
 }
@@ -36,7 +36,7 @@ void NI18NLoader::init()
 {
 	if (_init)
 		return;
-	_init = TRUE;
+	_init = true;
 
 	_translations[QLocale::English] = "";
 

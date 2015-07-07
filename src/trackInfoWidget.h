@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -16,32 +16,35 @@
 #ifndef N_TRACK_INFO_WIDGET_H
 #define N_TRACK_INFO_WIDGET_H
 
-#include <QWidget>
+#include <QFrame>
 #include <QMap>
 
 class QPropertyAnimation;
 class QGraphicsOpacityEffect;
-class QLabel;
+class NLabel;
 
-class NTrackInfoWidget : public QWidget
+class NTrackInfoWidget : public QFrame
 {
 	Q_OBJECT
 
 private:
 	qint64 m_msec;
+	int m_heightThreshold;
 	QString m_tooltipFormat;
-	QMap <QLabel *, QString> m_map;
-	QMap <QLabel *, QString> m_mapTick;
+	QMap <NLabel *, QString> m_map;
+	QMap <NLabel *, QString> m_mapTick;
 	QGraphicsOpacityEffect *m_effect;
 	QPropertyAnimation *m_animation;
+	QWidget *m_container;
 
 	bool event(QEvent *event);
 	void enterEvent(QEvent *event);
 	void leaveEvent(QEvent *event);
+	void resizeEvent(QResizeEvent *event);
 	void mouseMoveEvent(QMouseEvent *event);
 
 public:
-	NTrackInfoWidget(QWidget *parent = 0);
+	NTrackInfoWidget(QFrame *parent = 0);
 	~NTrackInfoWidget();
 
 public slots:

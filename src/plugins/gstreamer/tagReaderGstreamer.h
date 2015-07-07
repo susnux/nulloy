@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -34,7 +34,7 @@ private:
 	int m_bitDepth;
 	bool m_isValid;
 	QString m_codecName;
-	QString parse(const QString &format, bool *success, bool stopOnFail = FALSE);
+	QString parse(const QString &format, bool *success, bool stopOnFail = false);
 
 public:
 	NTagReaderGstreamer(QObject *parent = NULL) : NTagReaderInterface(parent) {}

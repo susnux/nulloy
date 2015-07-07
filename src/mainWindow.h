@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -29,18 +29,28 @@ private:
 #ifdef _N_NO_SKINS_
 	Ui::Dialog ui;
 #endif
+	bool m_resizeActive;
+	Qt::WindowFrameSection m_resizeSection;
+	QPoint m_resizePoint;
+	QRect m_resizeRect;
 	bool m_dragActive;
 	QPoint m_dragPoint;
 	QPoint m_unmaximizedPos;
 	QSize m_unmaximizedSize;
 	bool m_isFullScreen;
 
+	bool event(QEvent *event);
 	void changeEvent(QEvent *event);
 	bool eventFilter(QObject *obj, QEvent *event);
 	void closeEvent(QCloseEvent *event);
 	void mousePressEvent(QMouseEvent *event);
 	void mouseMoveEvent(QMouseEvent *event);
+	void mouseReleaseEvent(QMouseEvent *event);
+	void wheelEvent(QWheelEvent *event);
 	void resizeEvent(QResizeEvent *event);
+
+	Qt::WindowFrameSection getSection(const QPoint &pos);
+	void updateCursor(Qt::WindowFrameSection section);
 
 #ifdef Q_WS_WIN
 	bool m_framelessShadow;
@@ -49,9 +59,9 @@ private:
 #endif
 
 public:
-	NMainWindow(QWidget *parent = 0);
+	NMainWindow(const QString &uiFile = "", QWidget *parent = 0);
 	~NMainWindow();
-	void init(const QString &uiFile);
+	bool isOnTop();
 #ifdef Q_WS_WIN
 	Q_INVOKABLE void setFramelessShadow(bool enabled);
 #endif
@@ -72,6 +82,8 @@ signals:
 	void newTitle(const QString &title);
 	void fullScreenEnabled(bool enabled);
 	void maximizeEnabled(bool enabled);
+	void focusChanged(bool focused);
+	void scrolled(int delta);
 };
 
 #endif

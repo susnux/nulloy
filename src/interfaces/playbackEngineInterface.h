@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -42,6 +42,7 @@ public slots:
 	Q_INVOKABLE virtual void setMedia(const QString &file) = 0;
 	Q_INVOKABLE virtual void setVolume(qreal volume) = 0;
 	Q_INVOKABLE virtual void setPosition(qreal pos) = 0;
+	Q_INVOKABLE virtual void jump(qint64 msec) { Q_UNUSED(msec); }
 
 	Q_INVOKABLE virtual void play() = 0;
 	Q_INVOKABLE virtual void stop() = 0;

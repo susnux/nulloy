@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -19,7 +19,7 @@
 #include <QLabel>
 
 class NCoverReaderInterface;
-class QDialog;
+class NCoverWidgetPopup;
 
 class NCoverWidget : public QLabel
 {
@@ -28,8 +28,7 @@ class NCoverWidget : public QLabel
 private:
 	NCoverReaderInterface *m_coverReader;
 	QPixmap m_pixmap;
-	QDialog *m_popup;
-	QLabel *m_fullsizeLabel;
+	NCoverWidgetPopup *m_popup;
 
 	void resizeEvent(QResizeEvent *event);
 	void mousePressEvent(QMouseEvent *event);

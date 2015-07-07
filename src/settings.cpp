@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -27,7 +27,7 @@
 
 #include <QDebug>
 
-#define MIN_VERSION "0.4.5"
+#define MIN_VERSION "0.8"
 
 NSettings *NSettings::m_instance = NULL;
 
@@ -43,51 +43,63 @@ NSettings::NSettings(QObject *parent) : QSettings(NCore::settingsPath(), QSettin
 		setValue("SettingsVersion", MIN_VERSION);
 	}
 
-	initValue("Shortcuts/playAction", QStringList() << "X" << "C" << "Space");
-	initValue("Shortcuts/stopAction", "V");
-	initValue("Shortcuts/prevAction", "Z");
-	initValue("Shortcuts/nextAction", "B");
+	initValue("Shortcuts/PlayAction", QStringList() << "X" << "C" << "Space");
+	initValue("Shortcuts/StopAction", "V");
+	initValue("Shortcuts/PrevAction", "Z");
+	initValue("Shortcuts/NextAction", "B");
 
-	initValue("Shortcuts/fullScreenAction", "F11");
+	initValue("Shortcuts/Jump1ForwardAction", "Shift+Right");
+	initValue("Shortcuts/Jump1BackwardsAction", "Shift+Left");
+	initValue("Shortcuts/Jump2ForwardAction", "Right");
+	initValue("Shortcuts/Jump2BackwardsAction", "Left");
+	initValue("Shortcuts/Jump3ForwardAction", "Ctrl+Right");
+	initValue("Shortcuts/Jump3BackwardsAction", "Ctrl+Left");
+	initValue("Jump1", 5);
+	initValue("Jump2", 30);
+	initValue("Jump3", 180);
+
+	initValue("Shortcuts/FullScreenAction", "F11");
 
 	initValue("PlaylistTrackInfo", "%F (%d)");
 	initValue("WindowTitleTrackInfo","\"{%a - %t|%F}\" - " + QCoreApplication::applicationName() + " %v");
 	initValue("TooltipTrackInfo", "%C");
 
-	initValue("Shuffle", FALSE);
-	initValue("Repeat", FALSE);
+	initValue("Shuffle", false);
+	initValue("Repeat", false);
 
-	initValue("Maximized", FALSE);
-	initValue("MinimizeToTray", FALSE);
-	initValue("TrayIcon", FALSE);
-	initValue("AlwaysOnTop", FALSE);
-	initValue("WhilePlayingOnTop", FALSE);
-	initValue("StartPaused", FALSE);
-	initValue("RestorePlaylist", TRUE);
-	initValue("SingleInstance", TRUE);
-	initValue("EnqueueFiles", TRUE);
-	initValue("PlayEnqueued", TRUE);
-	initValue("AutoCheckUpdates", TRUE);
-	initValue("DisplayLogDialog", TRUE);
+	initValue("Maximized", false);
+	initValue("MinimizeToTray", false);
+	initValue("TrayIcon", false);
+	initValue("AlwaysOnTop", false);
+	initValue("WhilePlayingOnTop", false);
+	initValue("StartPaused", false);
+	initValue("RestorePlaylist", true);
+	initValue("SingleInstance", true);
+	initValue("EnqueueFiles", true);
+	initValue("PlayEnqueued", true);
+	initValue("AutoCheckUpdates", true);
+	initValue("DisplayLogDialog", true);
 	initValue("LastDirectory", QDesktopServices::storageLocation(QDesktopServices::MusicLocation));
-	initValue("LoopPlaylist", FALSE);
-	initValue("LoadNext", FALSE);
-	initValue("ShowCoverArt", TRUE);
+	initValue("LoopPlaylist", false);
+	initValue("LoadNext", false);
+	initValue("ShowCoverArt", true);
 	initValue("LoadNextSort", QDir::Name);
 	initValue("Volume", 0.8);
-	initValue("ShowDecibelsVolume", FALSE);
-	initValue("CoverArtFromDir", TRUE);
+	initValue("ShowDecibelsVolume", false);
 
 #ifdef Q_WS_WIN
-	initValue("TaskbarProgress", TRUE);
+	initValue("TaskbarProgress", true);
 #endif
 
-	initValue("FileFilters", QStringList() << "*.m3u" << "*.m3u8"
-	                         << "*.mp3"  << "*.ogg" << "*.mp4" << "*.wma"
-	                         << "*.flac" << "*.ape" << "*.wav" << "*.wv" << "*.tta"
-	                         << "*.mpc"  << "*.spx" << "*.opus"
-	                         << "*.m4a"  << "*.aac" << "*.aiff"
-	                         << "*.xm"   << "*.s3m" << "*.it" << "*.mod");
+	initValue("CustomTrash", false);
+	initValue("CustomFileManager", false);
+	initValue("FileFilters", QString(
+		"*.m3u *.m3u8 \
+		*.mp3 *.ogg *.mp4 *.wma \
+		*.flac *.ape *.wav *.wv *.tta \
+		*.mpc *.spx *.opus \
+		*.m4a *.aac *.aiff \
+		*.xm *.s3m *.it *.mod").simplified());
 
 	initValue("TrackInfo/TopLeft", "{%B kbps/|}{%s kHz|}");
 	initValue("TrackInfo/MiddleCenter", "{%a - %t|%F}");
@@ -120,15 +132,19 @@ void NSettings::loadShortcuts()
 	foreach (NAction *action, m_actionList) {
 		QList<QKeySequence> localShortcuts;
 		QStringList localsList = value("Shortcuts/" + action->objectName()).toStringList();
-		foreach (QString str, localsList)
-			localShortcuts << QKeySequence(str);
-		action->setShortcuts(localShortcuts);
+		if (!localsList.isEmpty()) {
+			foreach (QString str, localsList)
+				localShortcuts << QKeySequence(str);
+			action->setShortcuts(localShortcuts);
+		}
 
 		QList<QKeySequence> globalShortcuts;
 		QStringList globalsList = value("GlobalShortcuts/" + action->objectName()).toStringList();
-		foreach (QString str, globalsList)
-			globalShortcuts << QKeySequence(str);
-		action->setGlobalShortcuts(globalShortcuts);
+		if (!globalsList.isEmpty()) {
+			foreach (QString str, globalsList)
+				globalShortcuts << QKeySequence(str);
+			action->setGlobalShortcuts(globalShortcuts);
+		}
 	}
 }
 
@@ -138,21 +154,29 @@ void NSettings::saveShortcuts()
 		if (action->objectName().isEmpty() || !action->isCustomizable())
 			continue;
 
-		QStringList localsList;
 		QList<QKeySequence> localKeys = action->shortcuts();
-		foreach (QKeySequence seq, localKeys) {
-			if (!seq.isEmpty())
-				localsList << seq.toString();
+		if (!localKeys.isEmpty()) {
+			QStringList localsList;
+			foreach (QKeySequence seq, localKeys) {
+				if (!seq.isEmpty())
+					localsList << seq.toString();
+			}
+			setValue("Shortcuts/" + action->objectName(), localsList);
+		} else {
+			remove("Shortcuts/" + action->objectName());
 		}
-		setValue("Shortcuts/" + action->objectName(), localsList);
 
-		QStringList globalsList;
 		QList<QKeySequence> globalKeys = action->globalShortcuts();
-		foreach (QKeySequence seq, globalKeys) {
-			if (!seq.isEmpty())
-				globalsList << seq.toString();
+		if (!globalKeys.isEmpty()) {
+			QStringList globalsList;
+			foreach (QKeySequence seq, globalKeys) {
+				if (!seq.isEmpty())
+					globalsList << seq.toString();
+			}
+			setValue("GlobalShortcuts/" + action->objectName(), globalsList);
+		} else {
+			remove("GlobalShortcuts/" + action->objectName());
 		}
-		setValue("GlobalShortcuts/" + action->objectName(), globalsList);
 	}
 }
 

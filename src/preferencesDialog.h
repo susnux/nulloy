@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -39,19 +39,27 @@ public:
 	NPreferencesDialog(QWidget *parent = 0);
 	~NPreferencesDialog();
 
-public slots:
-	void setVersionLabel(QString text);
-
 private slots:
 	void loadSettings();
 	void saveSettings();
-	void on_versionCheckButton_clicked();
+	void on_fileManagerHelpButton_clicked();
+	void on_customTrashHelpButton_clicked();
 	void on_titleFormatHelpButton_clicked();
 	void on_languageComboBox_activated(int index);
 
 signals:
 	void settingsChanged();
+
+#ifndef _N_NO_UPDATE_CHECK_
+public slots:
+	void setVersionLabel(QString text);
+
+private slots:
+	void on_versionCheckButton_clicked();
+
+signals:
 	void versionRequested();
+#endif
 };
 
 #endif

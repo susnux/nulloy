@@ -11,11 +11,12 @@ set HAVE_VLC=no
 
 set FORCE_VERSION=no
 set BUILD_GSTREAMER=yes
-set BUILD_GSTREAMER_TAGREADER=no
-set BUILD_TAGLIB=yes
+set BUILD_GSTREAMER_TAGREADER=yes
+set BUILD_TAGLIB=no
 set BUILD_VLC=no
 set BUILD_PHONON=no
 set SUPPORT_SKINS=yes
+set APP_NAME=Nulloy
 
 :getopt
 	shift
@@ -23,8 +24,8 @@ set SUPPORT_SKINS=yes
 		set BUILD_GSTREAMER=no
 		goto getopt
 	)
-	if "%0" == "--gstreamer-tagreader" (
-		set BUILD_GSTREAMER_TAGREADER=yes
+	if "%0" == "--no-gstreamer-tagreader" (
+		set BUILD_GSTREAMER_TAGREADER=no
 		goto getopt
 	)
 	if "%0" == "--vlc" (
@@ -35,8 +36,8 @@ set SUPPORT_SKINS=yes
 		set BUILD_PHONON=yes
 		goto getopt
 	)
-	if "%0" == "--no-taglib" (
-		set BUILD_TAGLIB=no
+	if "%0" == "--taglib" (
+		set BUILD_TAGLIB=yes
 		goto getopt
 	)
 	if "%0" == "--no-skins" (
@@ -71,10 +72,10 @@ set SUPPORT_SKINS=yes
 :help
 	echo Usage:  %BASENAME% [options]
 	echo     --no-gstreamer              do not build GStreamer plugins
-	echo     --gstreamer-tagreader       build GStreamer TagReader plugin
+	echo     --no-gstreamer-tagreader    do not build GStreamer TagReader plugin
 	echo     --vlc                       build VLC plugins
 	echo     --phonon                    build Phonon plugins
-	echo     --no-taglib                 do not build with TagLib
+	echo     --taglib                    build with TagLib
 	echo     --no-skins                  disable skins support
 	echo     --console                   build with console output support
 	echo     --force-version VERSION     overrides version.pri
@@ -110,6 +111,8 @@ if "%DEBUG%" == "yes" (
 ) else (
 	echo CONFIG += release>> %QMAKE_CACHE%
 )
+
+echo APP_NAME = %APP_NAME%>> %QMAKE_CACHE%
 
 if not "%FORCE_VERSION%" == "no" (
 	echo Forced version: %FORCE_VERSION%

@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -30,12 +30,19 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QMenu>
+#include <QScrollBar>
 #include <QMessageBox>
 #include <QShortcut>
 #include <QUrl>
 
 NPlaylistWidget::NPlaylistWidget(QWidget *parent) : QListWidget(parent)
 {
+	m_fileDropBorderColor = QColor(Qt::transparent);
+	m_fileDropBackground = QBrush(Qt::NoBrush);
+	m_failedTextColor = QColor(Qt::red);
+	m_currentTextColor = QColor(Qt::black);
+	m_fileDropRadius = 0;
+
 	m_tagReader = dynamic_cast<NTagReaderInterface *>(NPluginLoader::getPlugin(N::TagReader));
 	m_playbackEngine = dynamic_cast<NPlaybackEngineInterface *>(NPluginLoader::getPlugin(N::PlaybackEngine));
 
@@ -76,17 +83,35 @@ NPlaylistWidget::NPlaylistWidget(QWidget *parent) : QListWidget(parent)
 	m_contextMenu->addAction(removeAction);
 	m_contextMenu->addAction(trashAction);
 
-	m_drag = NULL;
+	m_itemDrag = NULL;
+	m_fileDrop = false;
 
 	m_repeatMode = NSettings::instance()->value("Repeat").toBool();
-	m_shuffleMode = FALSE;
+	m_shuffleMode = false;
 	m_currentShuffledIndex = 0;
 	setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 }
 
+void NPlaylistWidget::wheelEvent(QWheelEvent *event)
+{
+	if (event->orientation() == Qt::Horizontal) {
+		QListWidget::wheelEvent(event);
+		return;
+	}
+
+	QScrollBar *vbar = verticalScrollBar();
+	int value = vbar->value();
+	int delta = event->delta();
+
+	if ((delta < 0 && value == vbar->maximum()) || (delta > 0 && value == vbar->minimum()))
+		event->accept();
+	else
+		QListWidget::wheelEvent(event);
+}
+
 void NPlaylistWidget::contextMenuEvent(QContextMenuEvent *event)
 {
-	if (selectedItems().size() != 0)
+	if (selectedItems().size() != 0 && itemAt(event->pos()))
 		m_contextMenu->exec(mapToGlobal(event->pos()));
 	else
 		QListWidget::contextMenuEvent(event);
@@ -120,8 +145,48 @@ void NPlaylistWidget::on_removeAction_triggered()
 void NPlaylistWidget::on_revealAction_triggered()
 {
 	QString error;
-	if (!NCore::revealInFileManager(selectedItems().first()->data(N::PathRole).toString(), &error))
+	if (!revealInFileManager(selectedItems().first()->data(N::PathRole).toString(), &error))
 		QMessageBox::warning(this, QObject::tr("Reveal in File Manager Error"), error, QMessageBox::Close);
+}
+
+bool NPlaylistWidget::revealInFileManager(const QString &file, QString *error)
+{
+	QFileInfo fileInfo(file);
+
+	if (!fileInfo.exists()) {
+		*error = QString(QObject::tr("File doesn't exist: <b>%1</b>")).arg(QFileInfo(file).fileName());
+		return false;
+	}
+
+	QString cmd;
+
+	bool customFileManager = NSettings::instance()->value("CustomFileManager").toBool();
+	if (customFileManager) {
+		cmd = NSettings::instance()->value("CustomFileManagerCommand").toString();
+		if (cmd.isEmpty()) {
+			*error = QString(QObject::tr("Custom File Manager is enabled but not configured."));
+			return false;
+		}
+		cmd.replace("%f", fileInfo.fileName());
+		cmd.replace("%d", fileInfo.canonicalPath());
+	} else {
+		QString path = fileInfo.canonicalFilePath();
+#if defined Q_WS_WIN
+		cmd = "explorer.exe /n,/select,\"" + path.replace('/', '\\') + "\"";
+#elif defined Q_WS_X11
+		cmd = "xdg-open \"" + fileInfo.canonicalPath() + "\"";
+#elif defined Q_WS_MAC
+		cmd = "open -R \"" + path + "\"";
+#endif
+	}
+
+	int res = QProcess::execute(cmd);
+	if (res != 0) {
+		*error = QString(QObject::tr("Custom File Manager command failed with exit code <b>%1</b>.")).arg(res);
+		return false;
+	}
+
+	return true;
 }
 
 NPlaylistWidget::~NPlaylistWidget() {}
@@ -131,7 +196,7 @@ void NPlaylistWidget::setCurrentItem(NPlaylistWidgetItem *item)
 	if (!item) {
 		m_currentItem = NULL;
 		m_tagReader->setSource("");
-		emit mediaSet("");
+		emit setMedia("");
 		return;
 	}
 
@@ -162,31 +227,31 @@ void NPlaylistWidget::setCurrentItem(NPlaylistWidgetItem *item)
 		item->setText(QFileInfo(file).fileName());
 	}
 
-	item->setData(N::FailedRole, FALSE); // reset failed role
+	item->setData(N::FailedRole, false); // reset failed role
 
 	// setting currently playing font to bold, colors set in delegate
 	QFont f = item->font();
 	if (m_currentItem) {
 		// reset old item to defaults
-		f.setBold(FALSE);
+		f.setBold(false);
 		m_currentItem->setFont(f);
 
 		m_currentItem->setData(N::PositionRole, m_playbackEngine->position());
 		m_currentItem->setData(N::CountRole, m_currentItem->data(N::CountRole).toInt() + 1);
 	}
-	f.setBold(TRUE);
+	f.setBold(true);
 	item->setFont(f);
 
 	scrollToItem(item);
 	m_currentItem = item;
 	update();
 
-	emit mediaSet(file);
+	emit setMedia(file);
 }
 
 void NPlaylistWidget::currentFailed()
 {
-	m_currentItem->setData(N::FailedRole, TRUE);
+	m_currentItem->setData(N::FailedRole, true);
 }
 
 int NPlaylistWidget::currentRow()
@@ -245,7 +310,9 @@ void NPlaylistWidget::on_itemActivated(QListWidgetItem *item)
 {
 	setCurrentItem(reinterpret_cast<NPlaylistWidgetItem *>(item));
 	emit currentActivated();
-	m_currentShuffledIndex = m_shuffledItems.indexOf(m_currentItem);
+
+	if (m_shuffleMode)
+		m_currentShuffledIndex = m_shuffledItems.indexOf(m_currentItem);
 }
 
 void NPlaylistWidget::addFiles(const QStringList &files)
@@ -272,12 +339,12 @@ bool NPlaylistWidget::setPlaylist(const QString &file)
 	QList<NPlaylistDataItem> dataItemsList = NPlaylistStorage::readPlaylist(file);
 
 	if (dataItemsList.isEmpty())
-		return FALSE;
+		return false;
 
 	for (int i = 0; i < dataItemsList.count(); ++i)
 		addItem(new NPlaylistWidgetItem(dataItemsList.at(i)));
 
-	return TRUE;
+	return true;
 }
 
 void NPlaylistWidget::playFiles(const QStringList &files)
@@ -286,7 +353,7 @@ void NPlaylistWidget::playFiles(const QStringList &files)
 	playRow(0);
 }
 
-void NPlaylistWidget::playNextRow()
+void NPlaylistWidget::playNextItem()
 {
 	int row = currentRow();
 	if (m_shuffleMode) {
@@ -303,7 +370,7 @@ void NPlaylistWidget::playNextRow()
 			QDir::SortFlag flag = (QDir::SortFlag)NSettings::instance()->value("LoadNextSort").toInt();
 			QString file = m_currentItem->data(N::PathRole).toString();
 			QString path = QFileInfo(file).path();
-			QStringList entryList = QDir(path).entryList(NSettings::instance()->value("FileFilters").toStringList(), QDir::Files | QDir::NoDotAndDotDot, flag);
+			QStringList entryList = QDir(path).entryList(NSettings::instance()->value("FileFilters").toString().split(' '), QDir::Files | QDir::NoDotAndDotDot, flag);
 			int index = entryList.indexOf(QFileInfo(file).fileName());
 			if (index != -1 && entryList.size() > index + 1) {
 				addItem(new NPlaylistWidgetItem(QFileInfo(path + "/" + entryList.at(index + 1))));
@@ -313,16 +380,15 @@ void NPlaylistWidget::playNextRow()
 	}
 }
 
-
 void NPlaylistWidget::currentFinished()
 {
 	if (m_repeatMode)
 		activateItem(m_currentItem);
 	else
-		playNextRow();
+		playNextItem();
 }
 
-void NPlaylistWidget::playPreviousRow()
+void NPlaylistWidget::playPrevItem()
 {
 	int row = currentRow();
 	if (m_shuffleMode) {
@@ -345,16 +411,16 @@ void NPlaylistWidget::rowsInserted(const QModelIndex &parent, int start, int end
 		m_shuffledItems.append(item(i));
 	}
 	if (m_shuffleMode)
-		setShuffleMode(TRUE);
+		setShuffleMode(true);
 	QListWidget::rowsInserted(parent, start, end);
 }
 
 void NPlaylistWidget::rowsAboutToBeRemoved(const QModelIndex &parent, int start, int end)
 {
-	bool currentRemoved = FALSE;
+	bool currentRemoved = false;
 	for (int i = start; i < end + 1; ++i) {
 		if (item(i) == m_currentItem)
-			currentRemoved = TRUE;
+			currentRemoved = true;
 		m_shuffledItems.removeAll(item(i));
 	}
 
@@ -421,21 +487,74 @@ NPlaylistWidgetItem* NPlaylistWidget::item(int row)
 	return reinterpret_cast<NPlaylistWidgetItem *>(QListWidget::item(row));
 }
 
+void NPlaylistWidget::paintEvent(QPaintEvent *e)
+{
+	QListWidget::paintEvent(e);
+
+	if (count() == 0) {
+		QPainter painter(viewport());
+		painter.setRenderHint(QPainter::Antialiasing);
+
+		int iconSide = 120;
+		painter.translate(0, (iconSide + fontMetrics().height()) / 2);
+		QRect iconRect = QRect(0, 0, iconSide, iconSide);
+		QRect rect = viewport()->rect();
+		iconRect.moveCenter(rect.center());
+		iconRect.moveBottom(rect.center().y() - fontMetrics().height());
+
+		QPen pen = painter.pen();
+		pen.setWidth(4);
+		pen.setStyle(Qt::CustomDashLine);
+		pen.setDashOffset(6);
+		pen.setDashPattern(QVector<qreal>() << 3 << 4);
+		painter.setPen(pen);
+		painter.drawRoundedRect(iconRect, 20, 20);
+		painter.drawText(viewport()->rect(), Qt::AlignHCenter | Qt::AlignVCenter, tr("Drop media here"));
+
+		painter.setPen(Qt::NoPen);
+		QBrush brush = painter.brush();
+		brush.setColor(pen.color());
+		brush.setStyle(Qt::SolidPattern);
+		painter.setBrush(brush);
+		static const QPoint points[7] = {
+			QPoint(33, 78),
+			QPoint(66, 39), QPoint(51, 39),
+			QPoint(51, 0),  QPoint(15, 0),
+			QPoint(15, 39), QPoint(0, 39)
+		};
+		painter.translate((rect.width() - iconSide) / 2 + 26, (rect.height() - iconSide)/ 2 - 54);
+		painter.drawPolygon(points, 7);
+	}
+
+	if (m_fileDrop) {
+		QPainter painter(viewport());
+		painter.setRenderHint(QPainter::Antialiasing);
+		painter.setPen(m_fileDropBorderColor);
+		painter.setBrush(m_fileDropBackground);
+		painter.drawRoundedRect(QRectF(viewport()->rect()).adjusted(0.5, 0.5, -0.5, -0.5), m_fileDropRadius, m_fileDropRadius);
+	}
+}
+
 
 // DRAG & DROP >>
-
-bool NPlaylistWidget::dropMimeData(int index, const QMimeData *data, Qt::DropAction action)
+bool NPlaylistWidget::dropMimeData(int index, const QMimeData *data, Qt::DropAction)
 {
-	Q_UNUSED(action);
+	bool wasEmpty = false;
+	if (count() == 0)
+		wasEmpty = true;
+
 	foreach (QUrl url, data->urls()) {
-		foreach (QString file, NCore::dirListRecursive(url.toLocalFile(), NSettings::instance()->value("FileFilters").toStringList())) {
+		foreach (QString file, NCore::dirListRecursive(url.toLocalFile(), NSettings::instance()->value("FileFilters").toString().split(' '))) {
 			insertItem(index, new NPlaylistWidgetItem(QFileInfo(file)));
 			++index;
 		}
 	}
 
-	m_drag = NULL;
-	return TRUE;
+	if (wasEmpty)
+		playRow(0);
+
+	m_itemDrag = NULL;
+	return true;
 }
 
 QStringList NPlaylistWidget::mimeTypes() const
@@ -484,26 +603,34 @@ void NPlaylistWidget::mouseMoveEvent(QMouseEvent *event)
 	mimeData->setUrls(urls);
 	m_mimeDataUrls.clear();
 
-	m_drag = new QDrag(this);
-	m_drag->setMimeData(mimeData);
+	m_itemDrag = new QDrag(this);
+	m_itemDrag->setMimeData(mimeData);
 	// restrct to move action
-	m_drag->start(Qt::MoveAction);
+	m_itemDrag->start(Qt::MoveAction);
 }
 
 void NPlaylistWidget::dropEvent(QDropEvent *event)
 {
-	if (m_drag) // moving withing playlist
+	if (m_itemDrag) // moving withing playlist
 		event->setDropAction(Qt::MoveAction);
 	else // dropping from file manager
 		event->setDropAction(Qt::CopyAction);
 
 	QListWidget::dropEvent(event);
+
+	m_fileDrop = false;
+	viewport()->update();
 }
 
 void NPlaylistWidget::dragEnterEvent(QDragEnterEvent *event)
 {
-	if (m_drag && !m_mimeDataUrls.isEmpty())
-		m_drag->mimeData()->setUrls(m_mimeDataUrls); // recover old data
+	if (m_itemDrag && !m_mimeDataUrls.isEmpty())
+		m_itemDrag->mimeData()->setUrls(m_mimeDataUrls); // recover old data
+
+	if (!m_itemDrag) {
+		m_fileDrop = true;
+		viewport()->update();
+	}
 
 	// change to move action
 	event->setDropAction(Qt::MoveAction);
@@ -515,24 +642,28 @@ void NPlaylistWidget::dragMoveEvent(QDragMoveEvent *event)
 	// change to move action
 	event->setDropAction(Qt::MoveAction);
 	QListWidget::dragMoveEvent(event);
+
+	if (!m_itemDrag)
+		m_fileDrop = (!itemAt(event->pos())) ? true : false;
 }
 
 void NPlaylistWidget::dragLeaveEvent(QDragLeaveEvent *event)
 {
-	if (m_drag) {
-		m_mimeDataUrls = m_drag->mimeData()->urls(); // backup
+	if (m_itemDrag) {
+		m_mimeDataUrls = m_itemDrag->mimeData()->urls(); // backup
 
 		// forbid drag outside, set dummy mime data
-		m_drag->mimeData()->clear();
+		m_itemDrag->mimeData()->clear();
 	}
 	event->ignore();
-}
 
+	m_fileDrop = false;
+	viewport()->update();
+}
 // << DRAG & DROP
 
 
 // STYLESHEET PROPERTIES >>
-
 void NPlaylistWidget::setCurrentTextColor(QColor color)
 {
 	m_currentTextColor = color;
@@ -553,5 +684,34 @@ QColor NPlaylistWidget::failedTextColor() const
 	return m_failedTextColor;
 }
 
+QColor NPlaylistWidget::fileDropBorderColor()
+{
+	return m_fileDropBorderColor;
+}
+
+void NPlaylistWidget::setFileDropBorderColor(QColor color)
+{
+	m_fileDropBorderColor = color;
+}
+
+QBrush NPlaylistWidget::fileDropBackground()
+{
+	return m_fileDropBackground;
+}
+
+void NPlaylistWidget::setFileDropBackground(QBrush brush)
+{
+	m_fileDropBackground = brush;
+}
+
+int NPlaylistWidget::fileDropRadius()
+{
+	return m_fileDropRadius;
+}
+
+void NPlaylistWidget::setFileDropRadius(int radius)
+{
+	m_fileDropRadius = radius;
+}
 // << STYLESHEET PROPERTIES
 

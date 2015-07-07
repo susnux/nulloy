@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -67,7 +67,7 @@ void NPlaybackEngineVlc::init()
 	connect(m_timer, SIGNAL(timeout()), this, SLOT(checkStatus()));
 	m_timer->start(100);
 
-	m_init = TRUE;
+	m_init = true;
 }
 
 NPlaybackEngineVlc::~NPlaybackEngineVlc()
@@ -147,7 +147,7 @@ void NPlaybackEngineVlc::pause()
 	if (!hasMedia())
 		return;
 
-	libvlc_media_player_set_pause(m_mediaPlayer, TRUE);
+	libvlc_media_player_set_pause(m_mediaPlayer, true);
 }
 
 void NPlaybackEngineVlc::stop()

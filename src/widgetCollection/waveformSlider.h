@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -26,29 +26,39 @@ class NWaveformSlider : public QAbstractSlider
 {
 	Q_OBJECT
 	Q_PROPERTY(int radius READ radius WRITE setRadius)
-	Q_PROPERTY(QBrush  background                 READ background WRITE setBackground)
-	Q_PROPERTY(QBrush  wave_background            READ waveBackground  WRITE setWaveBackground)
-	Q_PROPERTY(QColor  wave_border_color          READ waveBorderColor WRITE setWaveBorderColor)
-	Q_PROPERTY(QBrush  progress_normal_background READ progressNormalBackground WRITE setProgressNormalBackground)
-	Q_PROPERTY(QBrush  progress_paused_background READ progressPausedBackground WRITE setProgressPausedBackground)
-	Q_PROPERTY(QString normal_composition         READ normalComposition WRITE setNormalComposition)
-	Q_PROPERTY(QString paused_composition         READ pausedComposition WRITE setPausedComposition)
+	Q_PROPERTY(QBrush background READ background WRITE setBackground)
+	Q_PROPERTY(QBrush wave_background READ waveBackground WRITE setWaveBackground)
+	Q_PROPERTY(QColor wave_border_color READ waveBorderColor WRITE setWaveBorderColor)
+	Q_PROPERTY(QBrush progress_playing_background READ progressPlayingBackground WRITE setProgressPlayingBackground)
+	Q_PROPERTY(QBrush progress_paused_background READ progressPausedBackground WRITE setProgressPausedBackground)
+	Q_PROPERTY(QBrush remaining_playing_background READ remainingPlayingBackground WRITE setRemainingPlayingBackground)
+	Q_PROPERTY(QBrush remaining_paused_background READ remainingPausedBackground WRITE setRemainingPausedBackground)
+	Q_PROPERTY(QString playing_composition READ playingComposition WRITE setPlayingComposition)
+	Q_PROPERTY(QString paused_composition READ pausedComposition WRITE setPausedComposition)
+	Q_PROPERTY(QColor groove_playing_background READ groovePlayingColor WRITE setGroovePlayingColor)
+	Q_PROPERTY(QColor groove_paused_background READ groovePausedColor WRITE setGroovePausedColor)
+	Q_PROPERTY(QColor file_drop_border_color READ fileDropBorderColor WRITE setFileDropBorderColor)
+	Q_PROPERTY(QBrush file_drop_background READ fileDropBackground WRITE setFileDropBackground)
 
 private:
 	NWaveformBuilderInterface *m_waveBuilder;
-	QImage m_waveImage;
-	QVector<QImage> m_bufImage;
+	QImage m_backgroundImage;
+	QImage m_progressPlayingImage;
+	QImage m_progressPausedImage;
+	QImage m_remainingPlayingImage;
+	QImage m_remainingPausedImage;
 	QTimer *m_timer;
 	bool m_pausedState;
-
 	QSize m_oldSize;
-	int m_oldValue;
-	int m_oldIndex;
-	float m_oldBuildPos;
+	int m_oldBuilderIndex;
+	float m_oldBuilderPos;
+	bool m_hasMedia;
+	bool m_needsUpdate;
 
 	void mousePressEvent(QMouseEvent *event);
 	void wheelEvent(QWheelEvent *event);
 	void paintEvent(QPaintEvent *event);
+	void resizeEvent(QResizeEvent *event);
 	void changeEvent(QEvent *event);
 	void init();
 
@@ -58,7 +68,7 @@ public:
 	QSize sizeHint() const;
 
 public slots:
-	void drawFile(const QString &file);
+	void setMedia(const QString &file);
 	void setPausedState(bool);
 	void setValue(qreal value);
 
@@ -69,17 +79,37 @@ private slots:
 signals:
 	void sliderMoved(qreal value);
 
-// STYLESHEET PROPERTIES
+// DRAG & DROP >>
+private:
+	bool m_fileDrop;
+
+protected:
+	QStringList mimeTypes() const;
+	virtual void dragEnterEvent(QDragEnterEvent *event);
+	virtual void dragMoveEvent(QDragMoveEvent *event);
+	virtual void dragLeaveEvent(QDragLeaveEvent *event);
+	virtual void dropEvent(QDropEvent *event);
+
+signals:
+	void filesDropped(const QStringList &file);
+// << DRAG & DROP
+
+// STYLESHEET PROPERTIES >>
 private:
 	int m_radius;
 	QBrush m_background;
 	QBrush m_waveBackground;
 	QColor m_waveBorderColor;
-	QBrush m_progressNormalBackground;
+	QBrush m_progressPlayingBackground;
 	QBrush m_progressPausedBackground;
-	QPainter::CompositionMode m_normalComposition;
+	QBrush m_remainingPlayingBackground;
+	QBrush m_remainingPausedBackground;
+	QColor m_groovePlayingColor;
+	QColor m_groovePausedColor;
+	QPainter::CompositionMode m_playingComposition;
 	QPainter::CompositionMode m_pausedComposition;
-	bool m_needsUpdate;
+	QColor m_fileDropBorderColor;
+	QBrush m_fileDropBackground;
 
 public:
 	int radius();
@@ -94,17 +124,36 @@ public:
 	QColor waveBorderColor();
 	void setWaveBorderColor(QColor color);
 
-	QBrush progressNormalBackground();
-	void setProgressNormalBackground(QBrush brush);
+	QBrush progressPlayingBackground();
+	void setProgressPlayingBackground(QBrush brush);
 
 	QBrush progressPausedBackground();
 	void setProgressPausedBackground(QBrush brush);
 
-	QString normalComposition();
-	void setNormalComposition(const QString &mode);
+	QBrush remainingPlayingBackground();
+	void setRemainingPlayingBackground(QBrush brush);
+
+	QBrush remainingPausedBackground();
+	void setRemainingPausedBackground(QBrush brush);
+
+	QString playingComposition();
+	void setPlayingComposition(const QString &mode);
 
 	QString pausedComposition();
 	void setPausedComposition(const QString &mode);
+
+	QColor groovePlayingColor();
+	void setGroovePlayingColor(QColor color);
+
+	QColor groovePausedColor();
+	void setGroovePausedColor(QColor color);
+
+	QColor fileDropBorderColor();
+	void setFileDropBorderColor(QColor color);
+
+	QBrush fileDropBackground();
+	void setFileDropBackground(QBrush brush);
+// << STYLESHEET PROPERTIES
 };
 
 #endif

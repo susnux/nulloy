@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -14,37 +14,21 @@
 *********************************************************************/
 
 #include "coverWidget.h"
+
+#include "coverWidgetPopup.h"
 #include "coverReaderInterface.h"
 #include "pluginLoader.h"
 #include "settings.h"
 
 #include <QResizeEvent>
-#include <QDialog>
-#include <QVBoxLayout>
-#include <QCoreApplication>
-
-class NCoverWidgetPopup : public QDialog
-{
-private:
-	void mousePressEvent(QMouseEvent *)	{ hide(); }
-public:
-	NCoverWidgetPopup(QWidget *parent = 0) : QDialog(parent) {}
-};
 
 NCoverWidget::NCoverWidget(QWidget *parent) : QLabel(parent)
 {
 	m_coverReader = dynamic_cast<NCoverReaderInterface *>(NPluginLoader::getPlugin(N::CoverReader));
-
-	m_popup = new NCoverWidgetPopup(this);
-	m_popup->setMaximumSize(0, 0);
-	QVBoxLayout *layout = new QVBoxLayout;
-	layout->setContentsMargins(0, 0, 0, 0);
-	m_popup->setLayout(layout);
-	m_fullsizeLabel = new QLabel;
-	layout->addWidget(m_fullsizeLabel);
+	m_popup = NULL;
 
 	hide();
-	setScaledContents(TRUE);
+	setScaledContents(true);
 }
 
 NCoverWidget::~NCoverWidget() {}
@@ -64,26 +48,33 @@ void NCoverWidget::setSource(const QString &file)
 	hide();
 	init();
 
-	if (NSettings::instance()->value("PlaylistTrackInfo").toBool()) {
+	if (m_coverReader) {
+		m_coverReader->setSource(file);
+		m_pixmap = QPixmap::fromImage(m_coverReader->getImage());
+	}
+
+	if (m_pixmap.isNull()) { // fallback to external file
+		QString pixmapFile;
 		QDir dir = QFileInfo(file).absoluteDir();
-		QStringList files = dir.entryList(QStringList() << "*.jpg" << "*.png", QDir::Files);
-		QStringList patterns = QStringList() << "cover.*" << "folder.*" << "front.*";
-		foreach (QString pattern, patterns) {
-			int index = files.indexOf(QRegExp(pattern, Qt::CaseInsensitive));
-			if (index != -1) {
-				m_pixmap = QPixmap(dir.absolutePath() + "/" + files.at(index));
+		QStringList images = dir.entryList(QStringList() << "*.jpg" << "*.png", QDir::Files);
+
+		// search for image which file name starts same as source file
+		QString baseName = QFileInfo(file).completeBaseName();
+		foreach (QString image, images) {
+			if (baseName.startsWith(QFileInfo(image).completeBaseName())) {
+				pixmapFile = dir.absolutePath() + "/" + image;
 				break;
 			}
 		}
-	}
 
-	// fallback to coverReader
-	if (m_pixmap.isNull()) {
-		if (!m_coverReader)
-			return;
+		// search for cover.* or folder.* or front.*
+		if (pixmapFile.isEmpty()) {
+			QStringList matchedImages = images.filter(QRegExp("^(cover|folder|front)\\..*$", Qt::CaseInsensitive));
+			if (!matchedImages.isEmpty())
+				pixmapFile = dir.absolutePath() + "/" + matchedImages.first();
+		}
 
-		m_coverReader->setSource(file);
-		m_pixmap = QPixmap::fromImage(m_coverReader->getImage());
+		m_pixmap = QPixmap(pixmapFile);
 	}
 
 	if (!m_pixmap.isNull()) { // first scale, then show
@@ -111,9 +102,14 @@ void NCoverWidget::resizeEvent(QResizeEvent *event)
 
 void NCoverWidget::mousePressEvent(QMouseEvent *event)
 {
-	Q_UNUSED(event);
-	m_fullsizeLabel->setPixmap(m_pixmap);
-	m_popup->setWindowTitle(QString("%1 x %2").arg(m_pixmap.width()).arg(m_pixmap.height()));
+	if (event->button() != Qt::LeftButton) {
+		event->ignore();
+		return;
+	}
+
+	if (!m_popup)
+		m_popup = new NCoverWidgetPopup(QWidget::window());
+	m_popup->setPixmap(m_pixmap);
 	m_popup->show();
 }
 

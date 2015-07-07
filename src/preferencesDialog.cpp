@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -39,8 +39,9 @@
 
 using namespace NPluginLoader;
 
-QStringList vNames = QStringList() << "Top" << "Middle" << "Bottom";
-QStringList hNames = QStringList() << "Left" << "Center" << "Right";
+static QStringList vNames = QStringList() << "Top" << "Middle" << "Bottom";
+static QStringList hNames = QStringList() << "Left" << "Center" << "Right";
+static const char *LANGUAGE = QT_TRANSLATE_NOOP("PreferencesDialog", "English");
 
 NPreferencesDialog::~NPreferencesDialog() {}
 
@@ -58,12 +59,26 @@ NPreferencesDialog::NPreferencesDialog(QWidget *parent) : QDialog(parent)
 	connect(ui.enqueueFilesCheckBox, SIGNAL(toggled(bool)), ui.playEnqueuedCheckBox, SLOT(setEnabled(bool)));
 	connect(ui.singleInstanceCheckBox, SIGNAL(toggled(bool)), ui.playEnqueuedCheckBox, SLOT(setEnabled(bool)));
 	connect(ui.restorePlaylistCheckBox, SIGNAL(toggled(bool)), ui.startPausedCheckBox, SLOT(setEnabled(bool)));
+	connect(ui.customFileManagerCheckBox, SIGNAL(toggled(bool)), ui.customFileManagerCommandLineEdit, SLOT(setEnabled(bool)));
+	connect(ui.customTrashCheckBox, SIGNAL(toggled(bool)), ui.customTrashCommandLineEdit, SLOT(setEnabled(bool)));
 
 	setWindowTitle(QCoreApplication::applicationName() + tr(" Preferences"));
 
 #ifdef _N_NO_SKINS_
 	ui.skinLabel->hide();
 	ui.skinComboBox->hide();
+#endif
+
+#ifndef Q_WS_WIN
+	ui.taskbarProgressContainer->hide();
+#endif
+
+#ifdef _N_NO_UPDATE_CHECK_
+	ui.autoCheckUpdatesContainer->hide();
+#endif
+
+#if defined Q_WS_WIN || defined Q_WS_MAC
+	ui.customTrashContainer->hide();
 #endif
 
 	QPixmap pixmap = QIcon::fromTheme("dialog-warning", style()->standardIcon(QStyle::SP_MessageBoxWarning)).pixmap(16);
@@ -91,18 +106,14 @@ NPreferencesDialog::NPreferencesDialog(QWidget *parent) : QDialog(parent)
 		ui.tabWidget->removeTab(ui.tabWidget->indexOf(ui.pluginsTab));
 
 	ui.pluginsRestartLabel->setText(url + "&nbsp;&nbsp;" + ui.pluginsRestartLabel->text());
-	ui.pluginsRestartLabel->setVisible(FALSE);
+	ui.pluginsRestartLabel->setVisible(false);
 
 	ui.languageRestartLabel->setText(url + "&nbsp;&nbsp;" + ui.languageRestartLabel->text());
-	ui.languageRestartLabel->setVisible(FALSE);
+	ui.languageRestartLabel->setVisible(false);
 
 	ui.skinRestartLabel->setText(url + "&nbsp;&nbsp;" + ui.skinRestartLabel->text());
-	ui.skinRestartLabel->setVisible(FALSE);
+	ui.skinRestartLabel->setVisible(false);
 	connect(ui.skinComboBox, SIGNAL(activated(int)), ui.skinRestartLabel, SLOT(show()));
-
-#ifndef Q_WS_WIN
-	delete ui.taskbarProgressCheckBox;
-#endif
 
 	ui.waveformTrackInfoTable->horizontalHeader()->setResizeMode(QHeaderView::Stretch);
 }
@@ -113,6 +124,7 @@ void NPreferencesDialog::showEvent(QShowEvent *event)
 	QDialog::showEvent(event);
 }
 
+#ifndef _N_NO_UPDATE_CHECK_
 void NPreferencesDialog::setVersionLabel(QString text)
 {
 	ui.versionLabel->setText(text);
@@ -123,61 +135,30 @@ void NPreferencesDialog::on_versionCheckButton_clicked()
 	ui.versionLabel->setText("Checking...");
 	emit versionRequested();
 }
+#endif
 
-void NPreferencesDialog::on_titleFormatHelpButton_clicked()
+void NPreferencesDialog::on_fileManagerHelpButton_clicked()
 {
 	QDialog *dialog = new QDialog(this);
-	dialog->setWindowTitle("Title Formats");
-	dialog->setMaximumSize(0, 0);
+	dialog->setWindowTitle("File Manager Configuration");
 
 	QVBoxLayout *layout = new QVBoxLayout;
 	dialog->setLayout(layout);
 
 	QTextBrowser *textBrowser = new QTextBrowser(this);
 	textBrowser->setHtml(
-		"<table width=\"100%\">"
-			"<tr><td><b>%a</b></td><td>" + tr("Artist") + "</td></tr>"
-			"<tr><td><b>%t</b></td><td>" + tr("Title") + "</td></tr>"
-			"<tr><td><b>%A</b></td><td>" + tr("Album") + "</td></tr>"
-			"<tr><td><b>%c</b></td><td>" + tr("Comment") + "</td></tr>"
-			"<tr><td><b>%g</b></td><td>" + tr("Genre") + "</td></tr>"
-			"<tr><td><b>%y</b></td><td>" + tr("Year") + "</td></tr>"
-			"<tr><td><b>%n</b></td><td>" + tr("Track number") + "</td></tr>"
-			"<tr><td></td><td></td></tr>"
-			"<tr><td><b>%T</b></td><td>" + tr("Current time position (Waveform only)") + "</td></tr>"
-			"<tr><td><b>%r</b></td><td>" + tr("Remaining time (Waveform only)") + "</td></tr>"
-			"<tr><td></td><td></td></tr>"
-			"<tr><td><b>%C</b></td><td>" + tr("Time position under cursor (Tooltip only)") + "</td></tr>"
-			"<tr><td><b>%o</b></td><td>" + tr("Time offset under cursor (Tooltip only)") + "</td></tr>"
-			"<tr><td></td><td></td></tr>"
-			"<tr><td><b>%d</b></td><td>" + tr("Duration in format hh:mm:ss") + "</td></tr>"
-			"<tr><td><b>%d</b></td><td>" + tr("Duration in seconds") + "</td></tr>"
-			"<tr><td><b>%b</b></td><td>" + tr("Bit depth") + "</td></tr>"
-			"<tr><td><b>%B</b></td><td>" + tr("Bitrate in Kbps") + "</td></tr>"
-			"<tr><td><b>%s</b></td><td>" + tr("Sample rate in kHz") + "</td></tr>"
-			"<tr><td><b>%c</b></td><td>" + tr("Number of channels") + "</td></tr>"
-			"<tr><td></td><td></td></tr>"
-			"<tr><td><b>%f</b></td><td>" + tr("File name without extension") + "</td></tr>"
-			"<tr><td><b>%F</b></td><td>" + tr("File name") + "</td></tr>"
-			"<tr><td><b>%p</b></td><td>" + tr("File name including absolute path") + "</td></tr>"
-			"<tr><td><b>%e</b></td><td>" + tr("File name extension") + "</td></tr>"
-			"<tr><td><b>%E</b></td><td>" + tr("File name extension, uppercased") + "</td></tr>"
-			"<tr><td></td><td></td></tr>"
-			"<tr><td><b>%v</b></td><td>" + tr("Version number") + "</td></tr>"
-			"<tr><td><b>%%</b></td><td>" + tr("\'%\' character") + "</td></tr>"
-			"<tr><td></td><td></td></tr>"
-			"<tr><td>" + tr("Conditions:") + "</td><td></td></tr>"
-			"<tr><td><b>{</b><i>" + tr("true") + "</i><b>|</b><i>" + tr("false") + "</i><b>}</b></td><td>" + tr("if...else: evaluate for <i>true</i> or <i>false</i> case. Note: nesting conditions is not supported yet.") + "</td></tr>"
-			"<tr><td></td><td></td></tr>"
-			"<tr><td>" + tr("Examples:") + "</td><td></td></tr>"
-			"<tr><td><b>{%a - %t|%F}&nbsp;&nbsp;</b></td><td>" + tr("Print Artist and Title, separated with \"-\". If either of the tags is not available, print file name instead.") + "</td></tr>"
-			"<tr><td></td><td></td></tr>"
-			"<tr><td><b>{%g|}</b></td><td>" + tr("Print Genre. If not available, print nothing.") + "</td></tr>"
-		"</table><br>");
-	textBrowser->setStyleSheet("background: transparent");
+		tr("Supported parameters:") +
+		"<ul>" +
+			"<li><b>%f</b> - " + tr("File name") + "</li>" +
+			"<li><b>%d</b> - " + tr("Directory path") + "</li>" +
+		"</ul>" +
+		tr("Examples:") +
+		"<ul style=\"font-family: 'Lucida Console', Monaco, monospace\">" +
+			"<li>sh -c \"open -a '/Applications/Path Finder.app' '%d/%f'\"</li>" +
+			"<li>sh -c \"/usr/bin/pcmanfm -n '%d' && sleep 0.1 && xdotool type '%f' && xdotool key Escape\"</li>" +
+		"</ul>");
+	textBrowser->setStyleSheet("QTextBrowser { background: transparent }");
 	textBrowser->setFrameShape(QFrame::NoFrame);
-	textBrowser->setMinimumWidth(400);
-	textBrowser->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
 	layout->addWidget(textBrowser);
 
@@ -190,10 +171,108 @@ void NPreferencesDialog::on_titleFormatHelpButton_clicked()
 	layout->addLayout(buttonLayout);
 
 	dialog->show();
+	dialog->resize(640, 300);
+}
 
-	// resize according to content
-	QSize textSize = textBrowser->document()->size().toSize();
-	textBrowser->setMinimumHeight(textSize.height());
+void NPreferencesDialog::on_customTrashHelpButton_clicked()
+{
+#if !defined Q_WS_WIN && !defined Q_WS_MAC
+	QDialog *dialog = new QDialog(this);
+	dialog->setWindowTitle("Trash Command Configuration");
+
+	QVBoxLayout *layout = new QVBoxLayout;
+	dialog->setLayout(layout);
+
+	QTextBrowser *textBrowser = new QTextBrowser(this);
+	textBrowser->setHtml(
+		tr("Supported parameters:") +
+		"<ul>" +
+			"<li><b>%f</b> - " + tr("File path") + "</li>" +
+		"</ul>" +
+		tr("Examples:") +
+		"<ul style=\"font-family: 'Lucida Console', Monaco, monospace\">" +
+			"<li>/usr/bin/trash-put '%f'</li>" +
+			"<li>sh -c \"mv '%f' $HOME/.Trash\"</li>" +
+		"</ul>");
+	textBrowser->setStyleSheet("QTextBrowser { background: transparent }");
+	textBrowser->setFrameShape(QFrame::NoFrame);
+
+	layout->addWidget(textBrowser);
+
+	QPushButton *closeButton = new QPushButton(tr("Close"));
+	connect(closeButton, SIGNAL(clicked()), dialog, SLOT(accept()));
+	QHBoxLayout *buttonLayout = new QHBoxLayout();
+	buttonLayout->addStretch();
+	buttonLayout->addWidget(closeButton);
+	buttonLayout->addStretch();
+	layout->addLayout(buttonLayout);
+
+	dialog->show();
+	dialog->resize(640, 300);
+#endif
+}
+
+void NPreferencesDialog::on_titleFormatHelpButton_clicked()
+{
+	QDialog *dialog = new QDialog(this);
+	dialog->setWindowTitle("Title Formats");
+
+	QVBoxLayout *layout = new QVBoxLayout;
+	dialog->setLayout(layout);
+
+	QTextBrowser *textBrowser = new QTextBrowser(this);
+	textBrowser->setHtml(
+		tr("Supported parameters:") +
+		"<ul>" +
+			"<li><b>%a</b> - " + tr("Artist") + "</li>" +
+			"<li><b>%t</b> - " + tr("Title") + "</li>" +
+			"<li><b>%A</b> - " + tr("Album") + "</li>" +
+			"<li><b>%c</b> - " + tr("Comment") + "</li>" +
+			"<li><b>%g</b> - " + tr("Genre") + "</li>" +
+			"<li><b>%y</b> - " + tr("Year") + "</li>" +
+			"<li><b>%n</b> - " + tr("Track number") + "</li>" +
+			"<li><b>%T</b> - " + tr("Current time position (Waveform only)") + "</li>" +
+			"<li><b>%r</b> - " + tr("Remaining time (Waveform only)") + "</li>" +
+			"<li><b>%C</b> - " + tr("Time position under cursor (Tooltip only)") + "</li>" +
+			"<li><b>%o</b> - " + tr("Time offset under cursor (Tooltip only)") + "</li>" +
+			"<li><b>%d</b> - " + tr("Duration in format hh:mm:ss") + "</li>" +
+			"<li><b>%d</b> - " + tr("Duration in seconds") + "</li>" +
+			"<li><b>%b</b> - " + tr("Bit depth") + "</li>" +
+			"<li><b>%B</b> - " + tr("Bitrate in Kbps") + "</li>" +
+			"<li><b>%s</b> - " + tr("Sample rate in kHz") + "</li>" +
+			"<li><b>%c</b> - " + tr("Number of channels") + "</li>" +
+			"<li><b>%f</b> - " + tr("File name without extension") + "</li>" +
+			"<li><b>%F</b> - " + tr("File name") + "</li>" +
+			"<li><b>%p</b> - " + tr("File name including absolute path") + "</li>" +
+			"<li><b>%e</b> - " + tr("File name extension") + "</li>" +
+			"<li><b>%E</b> - " + tr("File name extension, uppercased") + "</li>" +
+			"<li><b>%v</b> - " + tr("Version number") + "</li>" +
+			"<li><b>%%</b> - " + tr("\'%\' character") + "</li>" +
+		"</ul>" +
+		tr("Conditions:") +
+		"<ul>" +
+			"<li><b>{<i>" + tr("true") + "</i>|<i>" + tr("false") + "</i>}</b> - " + tr("Evaluate for <b><i>true</i></b> or <b><i>false</i></b> case. Note: nesting conditions is not supported yet.") + "</li>"
+		"</ul>" +
+		tr("Examples:") +
+		"<ul>" +
+			"<li><b>{%a - %t|%F}</b> - " + tr("Print Artist and Title, separated with \"-\". If either of the tags is not available, print file name instead.") + "</li>"
+			"<li><b>{%g|}</b> - " + tr("Print Genre. If not available, print nothing.") + "</li>"
+		"</ul>");
+	textBrowser->setStyleSheet("QTextBrowser { background: transparent }");
+	textBrowser->setFrameShape(QFrame::NoFrame);
+
+	layout->addWidget(textBrowser);
+
+	QPushButton *closeButton = new QPushButton(tr("Close"));
+	connect(closeButton, SIGNAL(clicked()), dialog, SLOT(accept()));
+	QHBoxLayout *buttonLayout = new QHBoxLayout();
+	buttonLayout->addStretch();
+	buttonLayout->addWidget(closeButton);
+	buttonLayout->addStretch();
+	layout->addLayout(buttonLayout);
+
+	dialog->show();
+	dialog->resize(640, 480);
 }
 
 QGroupBox* NPreferencesDialog::createGroupBox(N::PluginType type)
@@ -223,7 +302,7 @@ QGroupBox* NPreferencesDialog::createGroupBox(N::PluginType type)
 		QRadioButton *button = new QRadioButton(containerName);
 		connect(button, SIGNAL(toggled(bool)), ui.pluginsRestartLabel, SLOT(show()));
 		if (containerName == settingsContainer)
-			button->setChecked(TRUE);
+			button->setChecked(true);
 		m_radioButtons[button] = descriptors.at(i);
 		layout->addWidget(button);
 	}
@@ -233,7 +312,7 @@ QGroupBox* NPreferencesDialog::createGroupBox(N::PluginType type)
 
 void NPreferencesDialog::on_languageComboBox_activated(int index)
 {
-	ui.languageRestartLabel->setVisible(TRUE);
+	ui.languageRestartLabel->setVisible(true);
 
 	QLocale locale = ui.languageComboBox->itemData(index).toLocale();
 	QString newText = NI18NLoader::translate(locale.language(), "PreferencesDialog", "Switching languages requires restart");
@@ -266,21 +345,29 @@ void NPreferencesDialog::loadSettings()
 	// general >>
 	QList<QWidget *> widgets = findChildren<QWidget *>();
 	foreach (QWidget *widget, widgets) {
-		QString className = QString(widget->metaObject()->className()).mid(1);
-		QString settingsName = widget->objectName();
-		settingsName[0] = settingsName.at(0).toUpper();
+		if (!widget->inherits("QCheckBox") && !widget->inherits("QLineEdit") && !widget->inherits("QAbstractSpinBox"))
+			continue;
+		QString className = QString(widget->metaObject()->className()).mid(1); // remove leading 'Q'
+		QString objectName = widget->objectName();
+		if (objectName == "qt_spinbox_lineedit")
+			continue;
+		QString settingsName = objectName;
 		settingsName.remove(className);
+		settingsName[0] = settingsName.at(0).toUpper();
 		if (widget->inherits("QCheckBox")) {
 			qobject_cast<QCheckBox *>(widget)->setChecked(NSettings::instance()->value(settingsName).toBool());
 		} else if (widget->inherits("QLineEdit")) {
 			qobject_cast<QLineEdit *>(widget)->setText(NSettings::instance()->value(settingsName).toString());
+		} else if (widget->inherits("QDoubleSpinBox")) {
+			qobject_cast<QDoubleSpinBox *>(widget)->setValue(NSettings::instance()->value(settingsName).toDouble());
 		}
 	}
 
 	ui.startPausedCheckBox->setEnabled(NSettings::instance()->value("RestorePlaylist").toBool());
 	ui.enqueueFilesCheckBox->setEnabled(NSettings::instance()->value("SingleInstance").toBool());
 	ui.playEnqueuedCheckBox->setEnabled(NSettings::instance()->value("SingleInstance").toBool() && NSettings::instance()->value("EnqueueFiles").toBool());
-	ui.fileFiltersTextEdit->setPlainText(NSettings::instance()->value("FileFilters").toStringList().join(" "));
+	ui.customFileManagerCommandLineEdit->setEnabled(NSettings::instance()->value("CustomFileManager").toBool());
+	ui.customTrashCommandLineEdit->setEnabled(NSettings::instance()->value("CustomTrash").toBool());
 	ui.versionLabel->setText("");
 	// << general
 
@@ -309,11 +396,13 @@ void NPreferencesDialog::loadSettings()
 	ui.skinComboBox->clear();
 	foreach (QString str, NSkinLoader::skinIdentifiers()) {
 		QString id = str.section('/', 2);
-		ui.skinComboBox->addItem(id.replace('/', ' ').replace(" (Built-in)", tr(" (Built-in)")), id);
+		QString userData = id;
+		QString text = id.replace('/', ' ').replace(" (Built-in)", tr(" (Built-in)"));
+		ui.skinComboBox->addItem(text, userData);
 	}
 
 	if (ui.skinComboBox->count() == 1)
-		ui.skinComboBox->setEnabled(FALSE);
+		ui.skinComboBox->setEnabled(false);
 
 	skinIndex = ui.skinComboBox->findData(NSettings::instance()->value("Skin"));
 	if (skinIndex != -1)
@@ -321,18 +410,17 @@ void NPreferencesDialog::loadSettings()
 #endif
 	// << skins
 
-
 	// translations >>
 	int localeIndex;
 	ui.languageComboBox->clear();
 	foreach (QLocale::Language language, NI18NLoader::translations()) {
 		QString languageString = QLocale::languageToString(language);
-		QString localizedString = NI18NLoader::translate(language, "PreferencesDialog", "English");
+		QString localizedString = NI18NLoader::translate(language, "PreferencesDialog", LANGUAGE);
 		ui.languageComboBox->addItem(QString("%1 (%2)").arg(localizedString).arg(languageString), QLocale(language));
 	}
 
 	if (ui.languageComboBox->count() == 1)
-		ui.languageComboBox->setEnabled(FALSE);
+		ui.languageComboBox->setEnabled(false);
 
 	localeIndex = ui.languageComboBox->findData(QLocale(NSettings::instance()->value("Language").toString()));
 	if (localeIndex != -1)
@@ -350,18 +438,24 @@ void NPreferencesDialog::saveSettings()
 	// general >>
 	QList<QWidget *> widgets = findChildren<QWidget *>();
 	foreach (QWidget *widget, widgets) {
-		QString className = QString(widget->metaObject()->className()).mid(1);
-		QString settingsName = widget->objectName();
-		settingsName[0] = settingsName.at(0).toUpper();
+		if (!widget->inherits("QCheckBox") && !widget->inherits("QLineEdit") && !widget->inherits("QAbstractSpinBox"))
+			continue;
+		QString className = QString(widget->metaObject()->className()).mid(1); // remove leading 'Q'
+		QString objectName = widget->objectName();
+		if (objectName == "qt_spinbox_lineedit")
+			continue;
+		QString settingsName = objectName;
 		settingsName.remove(className);
+		settingsName[0] = settingsName.at(0).toUpper();
 		if (widget->inherits("QCheckBox")) {
 			NSettings::instance()->setValue(settingsName, qobject_cast<QCheckBox *>(widget)->isChecked());
 		} else if (widget->inherits("QLineEdit")) {
 			NSettings::instance()->setValue(settingsName, qobject_cast<QLineEdit *>(widget)->text());
+		} else if (widget->inherits("QDoubleSpinBox")) {
+			NSettings::instance()->setValue(settingsName, qobject_cast<QDoubleSpinBox *>(widget)->value());
 		}
 	}
 
-	NSettings::instance()->setValue("FileFilters", ui.fileFiltersTextEdit->toPlainText().split(" "));
 #ifdef Q_WS_WIN
 	NW7TaskBar::instance()->setEnabled(NSettings::instance()->value("TaskbarProgress").toBool());
 #endif

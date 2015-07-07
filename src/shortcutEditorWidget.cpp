@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -27,14 +27,14 @@ NShortcutEditorWidget::NShortcutEditorWidget(QWidget *parent) : QTableWidget(par
 	setColumnCount(4);
 	setHorizontalHeaderLabels(QStringList() << tr("Action") << tr("Description") << tr("Shortcut") << tr("Global Shortcut"));
 
-	verticalHeader()->setVisible(FALSE);
+	verticalHeader()->setVisible(false);
 
 	setEditTriggers(QAbstractItemView::NoEditTriggers);
 	setSelectionMode(QAbstractItemView::SingleSelection);
 
 	setStyleSheet("QTableView::item:disabled { color: black; }");
 
-	m_init = FALSE;
+	m_init = false;
 }
 
 NShortcutEditorWidget::~NShortcutEditorWidget() {}
@@ -43,14 +43,14 @@ void NShortcutEditorWidget::init(const QList<NAction *> &actionList)
 {
 	if (m_init)
 		return;
-	m_init = TRUE;
+	m_init = true;
 
 	m_actionList = actionList;
 	setRowCount(m_actionList.size());
 	for (int i = 0; i < m_actionList.size(); ++i) {
 		NAction *action = m_actionList.at(i);
 
-		QTableWidgetItem *nameItem = new QTableWidgetItem(action->icon(), action->text());
+		QTableWidgetItem *nameItem = new QTableWidgetItem(action->text());
 		nameItem->setFlags(Qt::NoItemFlags);
 		nameItem->setData(Qt::UserRole, action->objectName());
 		setItem(i, Name, nameItem);
@@ -80,13 +80,7 @@ void NShortcutEditorWidget::init(const QList<NAction *> &actionList)
 	horizontalHeader()->setResizeMode(Description, QHeaderView::Fixed);
 	horizontalHeader()->setResizeMode(Shortcut, QHeaderView::Stretch);
 	horizontalHeader()->setResizeMode(GlobalShortcut, QHeaderView::Stretch);
-	horizontalHeader()->setStretchLastSection(TRUE);
-
-	int height = horizontalHeader()->height();
-	for (int i = 0; i < rowCount(); ++i)
-		height += rowHeight(i);
-	setMinimumHeight(height);
-	setMaximumHeight(height);
+	horizontalHeader()->setStretchLastSection(true);
 }
 
 void NShortcutEditorWidget::applyShortcuts()
@@ -98,15 +92,21 @@ void NShortcutEditorWidget::applyShortcuts()
 				continue;
 
 			QList<QKeySequence> localShortcuts;
-			QStringList localsList = item(i, Shortcut)->text().split(", ");
-			foreach (QString str, localsList)
-				localShortcuts << QKeySequence(str);
+			QString localText = item(i, Shortcut)->text();
+			if (!localText.isEmpty()) {
+				QStringList localsList = localText.split(", ");
+				foreach (QString str, localsList)
+					localShortcuts << QKeySequence(str);
+			}
 			action->setShortcuts(localShortcuts);
 
 			QList<QKeySequence> globalShortcuts;
-			QStringList globalsList = item(i, GlobalShortcut)->text().split(", ");
-			foreach (QString str, globalsList)
-				globalShortcuts << QKeySequence(str);
+			QString globalText = item(i, GlobalShortcut)->text();
+			if (!globalText.isEmpty()) {
+				QStringList globalsList = globalText.split(", ");
+				foreach (QString str, globalsList)
+					globalShortcuts << QKeySequence(str);
+			}
 			action->setGlobalShortcuts(globalShortcuts);
 		}
 	}

@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -31,7 +31,7 @@ static NW7TaskBar *_instance = NULL;
 static WId _winId;
 static ITaskbarList3 *_taskBar = NULL;
 static UINT _messageId;
-static bool _enabled = TRUE;
+static bool _enabled = true;
 
 NW7TaskBar* NW7TaskBar::instance()
 {
@@ -76,13 +76,13 @@ bool NW7TaskBar::winEvent(MSG *message, long *result)
 			if (FAILED(hr)) {
 				_taskBar->Release();
 				_taskBar = NULL;
-				return FALSE;
+				return false;
 			}
 		}
 		*result = hr;
-		return TRUE;
+		return true;
 	}
-	return FALSE;
+	return false;
 }
 
 void NW7TaskBar::setProgress(qreal val)

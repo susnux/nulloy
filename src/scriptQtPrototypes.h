@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -39,7 +39,7 @@ public:
 	NWidgetPrototype(QObject *parent = 0);
 	int windowFlags();
 	void setWindowFlags(int flags);
-	Q_INVOKABLE void setAttribute(int attribute, bool enable = TRUE);
+	Q_INVOKABLE void setAttribute(int attribute, bool enable = true);
 	Q_INVOKABLE QWidget* parentWidget();
 	Q_INVOKABLE void move(int x, int y);
 	Q_INVOKABLE void resize(int w, int h);

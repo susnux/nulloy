@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -24,6 +24,16 @@ Q_IMPORT_PLUGIN(widget_collection)
 
 int main(int argc, char *argv[])
 {
+#ifdef Q_WS_MAC
+	// https://bugreports.qt-project.org/browse/QTBUG-32789
+	if (QSysInfo::MacintoshVersion > QSysInfo::MV_10_8)
+		QFont::insertSubstitution(".Lucida Grande UI", "Lucida Grande");
+
+	// https://bugreports.qt-project.org/browse/QTBUG-40833
+	if (QSysInfo::MacintoshVersion > QSysInfo::MV_10_9)
+		QFont::insertSubstitution(".Helvetica Neue DeskInterface", "Helvetica Neue");
+#endif
+
 	QtSingleApplication instance(argc, argv);
 
 	// construct a message
@@ -40,14 +50,16 @@ int main(int argc, char *argv[])
 			return 0; // return if delivered
 	}
 
-	QApplication::setQuitOnLastWindowClosed(FALSE);
+	QApplication::setQuitOnLastWindowClosed(false);
 	QCoreApplication::setApplicationName("Nulloy");
 	QCoreApplication::setApplicationVersion(QString(_N_VERSION_) + " Alpha");
 	QCoreApplication::setOrganizationDomain("nulloy.com");
 
 	// for Qt core plugins
-#ifdef Q_WS_WIN
+#if defined(Q_WS_WIN)
 	QCoreApplication::addLibraryPath(QCoreApplication::applicationDirPath() + "/Plugins/");
+#elif defined(Q_WS_MAC)
+	QCoreApplication::addLibraryPath(QCoreApplication::applicationDirPath() + "/plugins/");
 #endif
 
 #ifndef _N_NO_SKINS_
@@ -57,6 +69,8 @@ int main(int argc, char *argv[])
 	NPlayer p;
 	QObject::connect(&instance, SIGNAL(messageReceived(const QString &)),
 	                 &p, SLOT(readMessage(const QString &)));
+	QObject::connect(&instance, SIGNAL(aboutToQuit()),
+	                 &p, SLOT(quit()));
 
 	if (NSettings::instance()->value("RestorePlaylist").toBool()) {
 		// try to load default playlist (will fail if msg contained files)

@@ -1,6 +1,6 @@
 /********************************************************************
 **  Nulloy Music Player, http://nulloy.com
-**  Copyright (C) 2010-2014 Sergey Vlasov <sergey@vlasov.me>
+**  Copyright (C) 2010-2015 Sergey Vlasov <sergey@vlasov.me>
 **
 **  This program can be distributed under the terms of the GNU
 **  General Public License version 3.0 as published by the Free
@@ -30,7 +30,7 @@ void NWaveformPeaks::reset()
 	m_factor = 1024;
 	m_factor_k = 2;
 	m_counter = 0;
-	m_completed = FALSE;
+	m_completed = false;
 
 	m_vector = QVector< QPair<qreal, qreal> >(MAX_RES, qMakePair(0.0, 0.0));
 }
@@ -45,7 +45,7 @@ int NWaveformPeaks::size()
 
 void NWaveformPeaks::complete()
 {
-	m_completed = TRUE;
+	m_completed = true;
 	m_vector.resize(m_index + 1);
 }
 
